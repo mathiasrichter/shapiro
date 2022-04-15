@@ -16,6 +16,34 @@ paths:
             application/json:
               schema: {}
   /{schema_name}:
+    put:
+      summary: Create new schema or change existing schema.
+      description: Add new schema with the specified name.
+      operationId: put_schema
+      parameters:
+        - required: true
+          schema:
+            title: Schema Name
+            type: string
+          name: schema_name
+          in: path
+        - required: true
+          schema:
+            title: JSON-LD for Schema
+            type: string
+          name: jsonld
+          in: body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: The JSON-LD submitted for the schema is malformed.
+          content:
+            application/json:
+              schema: {}
     get:
       summary: Get Schema
       description: Return the schema with the specified schema name.

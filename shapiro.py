@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Response, Request, status
 import logging
 import json
 import os
@@ -72,6 +72,14 @@ def get_schema(schema_name:str, response:Response):
         log.error(err_msg)
         return err_msg
     return result
+
+@app.put("/{schema_name}", status_code=200)
+async def put_schema(schema_name:str, request:Request, response:Response):
+    log.info("Adding/updating schema '{}'".format(schema_name))
+    payload =  await request.body()
+    log.info("Submitted payload {}".format(payload))
+    get_schema_store()[schema_name] = payload
+    #TODO: validate JSON-LD, probably have to write something as there seems no tool support!!
 
 @app.get("/{schema_name}/{id}", status_code=200)
 def get_schema_element(schema_name:str, id:str, response:Response):

@@ -21,11 +21,12 @@ Shapiro in its essence should eventually grow into an API for JSON-LD schema rep
 Such a repository will allow anyone putting their models in one place, support the process of actually using the models or mine the knowledge graph in code by way of IRIs pointing to the schema repository. Furthermore, such a repository allows UI tools to offer browsing, visualizing and editing of the knowledge graph for non-technical users.
 
 ## Current State
-This is extremely experimental, while I am trying to get my head around how to achieve the above using JSON-LD. [`shapiro-openapi.yml`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro-openapi.yml) is a first attempt to specify the API for JSON-LD schema repositories - currently defining the following operations:
+This is extremely experimental while I am trying to get my head around how to achieve the above using JSON-LD. [`shapiro-openapi.yml`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro-openapi.yml) is a first attempt to specify the API for JSON-LD schema repositories - currently defining the following operations:
 
 - list schemas in the repository
 - get a schema stored in the repository by its IRI
 - get an element of a schema in the repository by its IRI
+- add a schema with a specific name or update the schema under that name (without validation yet as I cannot seem to find a JSON-LD validator)
 
 [`shapiro.py`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro.py) is a very tactical FastAPI implementation of these operations reading schemas from a specific location in the filesystem of the server hosting Shapiro (current code just uses '.').
 
