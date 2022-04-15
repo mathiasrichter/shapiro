@@ -9,7 +9,7 @@ app = FastAPI()
 
 CONFIG = {
     'SCHEMA_SUFFIX': '.jsonld',
-    'SCHEMA_PATH': '/Users/mrichter/',
+    'SCHEMA_PATH': '.',
     'SCHEMA_STORE': {}
 }
 
