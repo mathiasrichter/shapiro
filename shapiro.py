@@ -3,6 +3,9 @@ import logging
 import json
 import os
 
+# TODO: properly wrap this up in a set of classes
+# TODO: package so can be installed with automatic dependency resolution
+
 log = logging.getLogger("uvicorn")
 
 app = FastAPI()
@@ -25,6 +28,7 @@ def get_schema_path():
 def init():
     load_schemas(get_schema_path())
 
+#TODO: wrap this into "schema loader interface" with implementations pulling schemas from graph DB, file system, ...
 def load_schemas(directory):
     for filename in os.listdir(directory):
         if filename.endswith(get_schema_suffix()):
@@ -44,6 +48,7 @@ def find_element(schema_name, id):
     element_name = schema_name + ":" + id
     schema = find_schema(schema_name)
     if schema is not None:
+        #TODO: assumes flattened schema, implement conversion
         for e in schema["@graph"]:
             if e["@id"] == element_name:
                 return e
