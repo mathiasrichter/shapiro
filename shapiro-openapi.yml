@@ -1,0 +1,68 @@
+openapi: 3.0.2
+info:
+  title: Shapiro
+  description: A schema repository for JSON-LD.
+  version: 0.1.1
+paths:
+  /schemas:
+    get:
+      summary: Get list of available schemas.
+      description: Return a detailed list of schemas available in this repository.
+      operationId: get_schema_list
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /{schema_name}:
+    get:
+      summary: Get Schema
+      description: Return the schema with the specified schema name.
+      operationId: get_schema
+      parameters:
+        - required: true
+          schema:
+            title: Schema Name
+            type: string
+          name: schema_name
+          in: path
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '404':
+          description: Schema not found.
+          content:
+            application/json:
+              schema: {}
+  /{schema_name}/{id}:
+    get:
+      summary: Get Schema Element
+      operationId: get_schema_element
+      parameters:
+        - required: true
+          schema:
+            title: Schema Name
+            type: string
+          name: schema_name
+          in: path
+        - required: true
+          schema:
+            title: Id
+            type: string
+          name: id
+          in: path
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '404':
+          description: Element or schema not found.
+          content:
+            application/json:
+              schema: {}
