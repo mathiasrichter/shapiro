@@ -1,6 +1,6 @@
 # Shapiro
 
-##Model as Code
+## Model as Code
 Model data as knowledge graphs using the JSON-LD syntax and use these models in API definitions/implementations and all other code consuming data based on these models.
 
 Make the use of these machine-readable model definitions pervasive throughout all phases of the software lifecycle (design, implement, test, release) and the lifecycle of the data originating from software built using these models.
