@@ -27,8 +27,8 @@ context =   {
       {
         "Counterparty": "http://localhost:8000/cs-schema/Counterparty",
         "cif" : "http://localhost:8000/cs-schema/cif",
-        "parseid" : "http://localhost:8000/cs-schema/cif",
-        "csid": "http://localhost:8000/cs-schema/cif"
+        "parseid" : "http://localhost:8000/cs-schema/parseid",
+        "csid": "http://localhost:8000/cs-schema/csid"
       }
 }
 
@@ -42,7 +42,15 @@ doc = {
 """
 
 context="https://json-ld.org/contexts/person.jsonld"
+doc = {
+    "@type": "Person",
+    "@id": "https://mathias.mwr.org",
+    "born": "10/12/1967",
+    "familyName": "Richter",
+    "givenName": "Mathias"
+}
 
+"""
 doc={
    "@context":
    {
@@ -128,16 +136,20 @@ doc={
       "postalCode": "http://www.w3.org/2006/vcard/ns#postal-code"
    }
 }
+"""
 
-
-expanded = jsonld.expand(doc)
+expanded = jsonld.expand(doc, {'expandContext':context, 'extractAllScripts':False})
 print( "======= EXPANDED ========")
 print(json.dumps(expanded, indent=2))
 
-compacted = jsonld.compact(doc, context)
+compacted = jsonld.compact(doc, context, {'graph': True})
 print( "======= COMPACTED ========")
 print(json.dumps(compacted, indent=2))
 
 flattened = jsonld.flatten(compacted)
 print( "======= FLATTENED ========")
 print(json.dumps(flattened, indent=2))
+
+framed = jsonld.frame(doc, context, {})
+print( "======= FRAMED ========")
+print(json.dumps(framed, indent=2))

@@ -4,6 +4,29 @@ info:
   description: A schema repository for JSON-LD.
   version: 0.1.1
 paths:
+  /validate:
+    post:
+      summary: Validate the provided schema.
+      description: Validate the provided schema by a set of rules, where multiple concepts of validation are conceivable.
+      operationId: validate_schema
+      parameters:
+        - required: true
+          schema:
+            title: JSON-LD to validate
+            type: string
+          name: jsonld
+          in: body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: The JSON-LD submitted does not pass validation.
+          content:
+            application/json:
+              schema: {}
   /schemas:
     get:
       summary: Get list of available schemas.
