@@ -1,0 +1,10 @@
+fastapi
+fastapi-openapi-generator
+pandas
+rdflib
+requests
+streamlit
+streamlit-ace
+streamlit-aggrid
+streamlit-agraph
+validators

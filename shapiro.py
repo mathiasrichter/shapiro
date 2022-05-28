@@ -2,6 +2,7 @@ from fastapi import FastAPI, Response, Request, status
 import logging
 from pyld import jsonld
 from schema_store import DefaultSchemaStore
+import json
 
 # TODO: package so can be installed with automatic dependency resolution
 
@@ -39,10 +40,32 @@ def get_schema(schema_name:str, response:Response):
         return err_msg
     return result
 
-@app.get("/{schema_name}/classes", status_code=200)
+@app.get("/{schema_name}/context", status_code=200)
+def get_schema(schema_name:str, response:Response):
+    log.info("Retrieving context for schema '{}'".format(schema_name))
+    result = SCHEMA_STORE.context(schema_name)
+    if result is None:
+        response.status_code=status.HTTP_404_NOT_FOUND
+        err_msg = "Schema '{}' not found".format(schema_name)
+        log.error(err_msg)
+        return err_msg
+    return result
+
+@app.get("/{schema_name}/elements/{type}", status_code=200)
+def get_classes(schema_name:str, type:str, response:Response):
+    log.info("Retrieving elements for schema '{}' with type '{}'".format(schema_name, type))
+    result = SCHEMA_STORE.elements(schema_name, type)
+    if result is None:
+        response.status_code=status.HTTP_404_NOT_FOUND
+        err_msg = "Schema '{}' not found".format(schema_name)
+        log.error(err_msg)
+        return err_msg
+    return result
+
+@app.get("/{schema_name}/elements", status_code=200)
 def get_classes(schema_name:str, response:Response):
-    log.info("Retrieving classes for schema '{}'".format(schema_name))
-    result = SCHEMA_STORE.classes(schema_name)
+    log.info("Retrieving elements for schema '{}'".format(schema_name))
+    result = SCHEMA_STORE.elements(schema_name, None)
     if result is None:
         response.status_code=status.HTTP_404_NOT_FOUND
         err_msg = "Schema '{}' not found".format(schema_name)

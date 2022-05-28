@@ -1,53 +1,77 @@
 import logging
 import json
+from json import JSONDecodeError
 import os
 from abc import ABC, abstractmethod
 
 log = logging.getLogger("uvicorn")
 
-# Abstract super class for a JSON-LD schema store
-# Provides methods for retrieving schemas and schema elements
 class AbstractSchemaStore(ABC):
+    """
+    Abstract super class for a JSON-LD schema store
+    Provides methods for retrieving schemas and schema elements
+    """
 
-    # Return the number of schemas in this store
     @abstractmethod
     def schema_count(self):
+        """
+        Return the number of schemas in this store
+        """
         pass
 
-    # Return the names of all schemas in this store
     @abstractmethod
     def schema_names(self):
+        """
+        Return the names of all schemas in this store
+        """
         pass
 
-    # Add the specified JSON-LD schema to the store. This overrides
-    # existing schemas stored under the same name.
     @abstractmethod
     def add_schema(self, schema_name, jsonld):
+        """
+        Add the specified JSON-LD schema to the store. This overwrites
+        existing schemas stored under the same name.
+        """
         pass
 
-    # Find the schema with the specified name.
-    # Returns JSON-LD for the schema or None if a schema with
-    # the specified name does not exist.
     @abstractmethod
     def find_schema(self, schema_name):
+        """
+        Find the schema with the specified name.
+        Returns JSON-LD for the schema or None if a schema with
+        the specified name does not exist.
+        """
         pass
 
-    # Find the element with the specified id in the schema with
-    # the specified name. Returns JSON-LD for the element or
-    # none if either schema or element does not exist.
     @abstractmethod
     def find_element(self, schema_name, id):
+        """
+        Find the element with the specified id in the schema with
+        the specified name. Returns JSON-LD for the element or
+        none if either schema or element does not exist.
+        """
         pass
 
-    # Return all classes in the specified schema.
     @abstractmethod
-    def classes(self, schema_name):
+    def elements(self, schema_name, type):
+        """
+        Return all classes in the specified schema with the specified type.
+        If no type is specified (None or '') then all elements are returned.
+        """
         pass
 
-# Default implementatipon of schema store.
-# Loads schemas into memory from a directory.
-# This is a naive implementation of a schema store.
+    @abstractmethod
+    def context(self, schema_name):
+        """
+        Return the context of the schema with the specified name.
+        """
+        pass
+
 class DefaultSchemaStore(AbstractSchemaStore):
+    """
+    Naive default implementation of schema store.
+    Loads schemas into memory from a directory.
+    """
 
     def __init__(self, schema_suffix = '.jsonld', schema_path = '.'):
         self.schema_suffix = schema_suffix
@@ -62,7 +86,10 @@ class DefaultSchemaStore(AbstractSchemaStore):
                 file = open(filename, 'r')
                 schema_name = filename[0:len(filename)-len(self.schema_suffix)]
                 log.info("Loading schema '{}' from '{}'".format(schema_name, filename))
-                self.add_schema(schema_name, json.load(file))
+                try:
+                    self.add_schema(schema_name, json.load(file))
+                except JSONDecodeError as x:
+                    log.error("Could not load schema '{}' from '{}': {}".format(schema_name, filename, x))
                 file.close()
 
     def add_schema(self, schema_name, jsonld):
@@ -91,6 +118,18 @@ class DefaultSchemaStore(AbstractSchemaStore):
                     return e
         return None
 
-    def classes(self, schema_name):
-        #TODO: implement properly.
+    def elements(self, schema_name, type):
+        schema = self.find_schema(schema_name)
+        if schema is not None:
+            result = []
+            for e in schema["@graph"]:
+                if e["@type"] == type or type == '' or type is None:
+                    result.append(e)
+            return result
+        return None
+
+    def context(self, schema_name):
+        schema = self.find_schema(schema_name)
+        if schema is not None:
+            return schema['@context']
         return None

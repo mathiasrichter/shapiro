@@ -30,8 +30,12 @@ This is extremely experimental while I am trying to get my head around how to ac
 
 [`shapiro.py`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro.py) is a very tactical FastAPI implementation of these operations reading schemas from a specific location in the filesystem of the server hosting Shapiro (current code just uses '.').
 
-## Installing and running Shapiro
+[`shapiro-ui.py`](https://github.com/mathiasrichter/shapiro/blob/main/ui/shapiro-ui.py) is a UI based on [Streamlit](https://streamlit.io/).
+
+## Installing and running Shapiro & Shapiro UI
 1. Clone the Shapiro repository.
-2. Install FastAPI: `pip install fastapi`
-3. Run Shapiro: `uvicorn shapiro:app`
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run Shapiro Server: `uvicorn shapiro:app`
 4. Access the API at `http://localhost:8000`
+5. Run the Shapiro UI: `streamlit ui/shapiro-ui.py`
+6. Browse & edit schemas via UI.
