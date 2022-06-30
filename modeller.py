@@ -194,7 +194,7 @@ class Property(ModelNode):
         """
         return self.model.is_mandatory(self)
 
-     def set_min_length(self, min:int) -> 'Property':
+    def set_min_length(self, min:int) -> 'Property':
         """
         Set the min string length of this property, if it is of type string.
         If it is not, an exception will be raised.
@@ -352,15 +352,19 @@ class Entity(ModelNode):
 
 class EntityRef(Entity):
 
-    def __init__(self, model:'Model', name:str, url:str):
+    def __init__(self, model:'Model', name:str, url:str, url_alias:str):
         util.resolve(url+name)
         super().__init__(model, name, 'References entity '+name+' at '+url)
+        self.url = url
+        self.alias = url_alias
 
 class PropertyRef(Property):
 
-    def __init__(self, model:'Model', name:str, url:str):
+    def __init__(self, model:'Model', name:str, url:str, url_alias:str, type:PropertyType):
         util.resolve(url+name)
-        super().__init__(model, name, 'References property '+name+' at '+url)
+        super().__init__(model, name, 'References property '+name+' at '+url, type)
+        self.url = url
+        self.alias = url_alias
 
 class Model(ModelBase):
 
@@ -432,8 +436,8 @@ class Model(ModelBase):
         self.graph.add_node(e)
         return e
 
-    def entity_ref(self, name:str, url:str) -> EntityRef:
-        e = EntityRef(self, name, url)
+    def entity_ref(self, name:str, url:str, alias:str) -> EntityRef:
+        e = EntityRef(self, name, url, alias)
         self.graph.add_node(e)
         return e
 
@@ -442,27 +446,24 @@ class Model(ModelBase):
         self.graph.add_node(p)
         return p
 
-    def property_ref(self, name:str, url:str) -> PropertyRef:
-        p = PropertyRef(self, name, url)
+    def property_ref(self, name:str, url:str, alias:str, type:PropertyType) -> PropertyRef:
+        p = PropertyRef(self, name, url, alias, type)
         self.graph.add_node(p)
         return p
 
     def add_property(self, entity:Entity, property: Property) -> 'Model':
-        if property not in self.get_properties(entity):
-            self.graph.add_edge(entity, property, edge_type=HasEdge(self, entity, property))
+        if property not in self.get_properties_of(entity):
+            self.graph.add_edge(entity, property, edge_type=HasProperty(entity, property))
         return self
 
     def get_property(self, name:str) -> Property:
         return self.__get_node(name, Property)
 
-    def get_entity(self, name:str) -> Entity:
-        return self.__get_node(name, Entity)
-
-    def get_entities(self) -> list[Entity]:
-        return self.__nodes(Entity)
-
     def get_properties(self) -> list[Property]:
         return self.__nodes(Property)
+
+    def get_property_refs(self) -> list[PropertyRef]:
+        return self.__nodes(PropertyRef)
 
     def get_properties_of(self, entity:Entity) -> list[Property]:
         return list(map(lambda x: x.target, self.__get_edges_from(entity, HasProperty)))
@@ -473,6 +474,18 @@ class Model(ModelBase):
             return result[0]
         else:
             return None
+
+    def get_entity(self, name:str) -> Entity:
+        return self.__get_node(name, Entity)
+
+    def get_entities(self) -> list[Entity]:
+        return self.__nodes(Entity)
+
+    def get_entity_refs(self) -> list[EntityRef]:
+        return self.__nodes(EntityRef)
+
+    def get_entities_having(self, property: Property) -> list[Entity]:
+        return list(map(lambda x: x.source, self.__get_edges_to(property, HasProperty)))
 
     def get_relationships(self) -> list[RelatedTo]:
         return self.__get_edges(RelatedTo)
