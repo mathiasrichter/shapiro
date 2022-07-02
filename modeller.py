@@ -96,8 +96,8 @@ class StringPatternConstraint(ValidationConstraint):
 
 class RangeConstraint(ValidationConstraint):
     """
-    Expresses a min and/or a max value for the numeric range of an integer or a decimal. To express just a min or just a max, specify the other
-    value as None. The min/max values can be int or float depending on the type of the property the constraint is for.
+    Expresses a min and/or a max value for the numeric range of an integer or a decimal or the date/time range on a date/time value. To express just a min or just a max, specify the other
+    value as None. The min/max values can be int/float/date/time/datetime depending on the type of the property the constraint is for.
     """
     def __init__(self, model:'Model', name:str, description:str, min, max):
         super().__init__(model, name, description)
@@ -301,7 +301,7 @@ class Entity(ModelNode):
         """
         Relate this entity to one specified target entity.
         """
-        self.model.relate_one_to_many(self, target, relationship_name, relationship_description)
+        self.model.relate_one(self, target, relationship_name, relationship_description)
         return self
 
     def relate_zero_to_one(self, target:'Entity', relationship_name:str, relationship_description:str) -> 'Entity':
@@ -373,14 +373,14 @@ class Model(ModelBase):
         self.graph = nx.MultiDiGraph()
 
     def __get_node(self, name:str, node_type:type):
-        result = list(filter(lambda x: (type(x)==node_type and x.name==name), self.graph.nodes()))
+        result = list(filter(lambda x: (isinstance(x, node_type) and x.name==name), self.graph.nodes()))
         if len(result) == 1:
             return result[0]
         else:
             return None
 
     def __nodes(self, node_type:type) -> list[ModelNode]:
-        return list(filter(lambda x: type(x)==node_type, self.graph.nodes()))
+        return list(filter(lambda x: isinstance(x, node_type), self.graph.nodes()))
 
     def get_all_edges(self):
         return list(map(lambda x: self.__get_edge_object(x), self.graph.edges()))
@@ -405,24 +405,24 @@ class Model(ModelBase):
         return list(map(lambda x: self.__get_edge_object(x), result))
 
     def __successor(self, source:ModelNode, name:str, successor_node_type:type) -> ModelNode:
-        result = list(filter(lambda x: (type(x)==successor_node_type and x.name==name), self.graph.successors(source)))
+        result = list(filter(lambda x: (isinstance(x, successor_node_type) and x.name==name), self.graph.successors(source)))
         if len(result) == 1:
             return result[0]
         else:
             return None
 
     def __successors(self, source:ModelNode, successor_node_type:type) -> list[ModelNode]:
-        return list(filter(lambda x: (type(x)==successor_node_type), self.graph.successors(source)))
+        return list(filter(lambda x: isinstance(x, successor_node_type), self.graph.successors(source)))
 
     def __predecessor(self, target:ModelNode, name:str, predecessor_node_type:type) -> ModelNode:
-        result = list(filter(lambda x: (type(x)==predecessor_node_type and x.name==name), self.graph.predecessors(target)))
+        result = list(filter(lambda x: isinstance(x, predecessor_node_type) and x.name==name, self.graph.predecessors(target)))
         if len(result) == 1:
             return result[0]
         else:
             return None
 
     def __predecessors(self, target:ModelNode, predecessor_node_type:type) -> list[ModelNode]:
-        return list(filter(lambda x: (type(x)==predecessor_node_type), self.graph.predecessors(target)))
+        return list(filter(lambda x: isinstance(x, predecessor_node_type), self.graph.predecessors(target)))
 
     def __get_edge_object(self, edge:tuple) -> ModelEdge:
         d = self.graph.get_edge_data(edge[0], edge[1])
@@ -504,10 +504,14 @@ class Model(ModelBase):
         return self.__get_edges_to(target, RelatedTo)
 
     def get_constraints(self, property:Property)-> list[ValidationConstraint]:
-        return self.__get_successors(property, ValidationConstraint)
+        return self.__successors(property, ValidationConstraint)
 
-    def get_constraint(self, property:Property, constraint_type:type) -> ValidationConstraint:
-        return self.__get_successors(property, constraint_type)
+    def get_constraint(self, property:Property, constraint_type:type) -> list[ValidationConstraint]:
+        result = list(self.__successors(property, constraint_type))
+        if len(result) == 1:
+            return result[0]
+        else:
+            return None
 
     def get_superclasses(self, entity:Entity, recursive = False) -> list[Entity]:
         result = list(map(lambda x: x.target, self.__get_edges_from(entity, IsA)))
@@ -530,10 +534,11 @@ class Model(ModelBase):
             self.graph.remove_node(c)
         elif mandatory is True and c is None:
             c = ValueMandatoryConstraint(self, property.name, "A value is mandatory for property '"+property.name+"'")
-            self.model.add_edge(property, c, edge_type=HasConstraint(self, property, c))
+            self.graph.add_edge(property, c, edge_type=HasConstraint(property, c))
         return self
 
     def is_mandatory(self, property:Property)  -> bool:
+        print(self.get_constraint(property, ValueMandatoryConstraint))
         return self.get_constraint(property, ValueMandatoryConstraint) is not None
 
     def set_min_length(self, property:Property, min:int) -> 'Model':
@@ -548,20 +553,20 @@ class Model(ModelBase):
         desc = None
         if c is not None:
             if min is not None and c.max_length is None:
-                desc = "String length must be at least {}.".format(min)
+                desc = "String length for property '{}' must be at least {}.".format(property.name, min)
             elif min is not None and c.max_length is not None:
-                desc = "String length must be between {} and {}".format(min, c.max_length)
+                desc = "String length for property '{}' must be between {} and {}".format(property.name, min, c.max_length)
             elif min is None and c.max_length is not None:
-                desc = "String length must be at most {}.".format(c.max_length)
+                desc = "String length for property '{}' must be at most {}.".format(property.name, c.max_length)
             c.min_length = min
             c.description = desc
         else:
-            c = StringLengthConstraint(self, property.name, desc, min, None)
-            self.graph.add_edge(property, c, edge_type=HasConstraint(self, property, c))
+            c = StringLengthConstraint(self, property.name, "Length of value for '{}' must be at least {}.".format(property.name, min), min, None)
+            self.graph.add_edge(property, c, edge_type=HasConstraint(property, c))
         return self
 
     def get_min_length(self, property:Property) -> int:
-        c = self.__get_constraint(property, StringLengthConstraint)
+        c = self.get_constraint(property, StringLengthConstraint)
         if c is not None:
             return c.min_length
         else:
@@ -570,7 +575,7 @@ class Model(ModelBase):
     def set_max_length(self, property:Property, max:int) -> 'Model':
         if property.type != PropertyType.STRING:
             raise Exception("Property must have type STRING for a string length constraint.")
-        c = self.__get_constraint(property, StringLengthConstraint)
+        c = self.get_constraint(property, StringLengthConstraint)
         if c is not None and c.min_length is not None and max is not None and c.min_length > max:
             raise Exception("Min length cannot be greater than max length.")
         if c is not None and c.min_length is None and max is None:
@@ -579,20 +584,20 @@ class Model(ModelBase):
         desc = None
         if c is not None:
             if c.min_length is not None and max is None:
-                desc = "String length must be at least {}.".format(c.min_length)
+                desc = "String length for property '{}' must be at least {}.".format(property.name, c.min_length)
             elif c.min_length is not None and max is not None:
-                desc = "String length must be between {} and {}".format(c.min_length, max)
+                desc = "String length for property '{}' must be between {} and {}.".format(property.name, c.min_length, max)
             elif c.min_length is None and max is not None:
-                desc = "String length must be at most {}.".format(max)
+                desc = "String length for property '{}' must be at most {}.".format(property.name, max)
             c.max_length = max
             c.description = desc
         else:
-            c = StringLengthConstraint(self.model, self.name, desc, None, max)
-            self.graph.add_edge(property, c, edge_type=HasConstraint(self, property, c))
+            c = StringLengthConstraint(self.model, property.name, "Length of value for '{}' must be at most {}.".format(property.name, max), None, max)
+            self.graph.add_edge(property, c, edge_type=HasConstraint(property, c))
         return self
 
     def get_max_length(self, property:Property) -> int:
-        c = self.__get_constraint(property, StringLengthConstraint)
+        c = self.get_constraint(property, StringLengthConstraint)
         if c is not None:
             return c.max_length
         else:
@@ -601,10 +606,10 @@ class Model(ModelBase):
     def set_string_pattern(self, property:Property, pattern:str) -> 'Model':
         if property.type != PropertyType.STRING:
             raise Exception("Property must have type STRING for a string pattern constraint.")
-        c = self.__get_constraint(property, StringPatternConstraint)
+        c = self.get_constraint(property, StringPatternConstraint)
         if c is None and pattern is not None:
-            newconstraint = StringPatternConstraint(self.model, self.name, "The string must match this pattern.", pattern)
-            self.graph.add_edge(property, newconstraint, edge_type=HasConstraint(self, property, newconstraint))
+            newconstraint = StringPatternConstraint(self, self.name, "The value for property '{}' must match pattern '{}'.".format(property.name, pattern), pattern)
+            self.graph.add_edge(property, newconstraint, edge_type=HasConstraint(property, newconstraint))
         if c is not None:
             if pattern is None:
                 self.graph.remove_node(c)
@@ -613,7 +618,7 @@ class Model(ModelBase):
         return self
 
     def get_string_pattern(self, property:Property) -> str:
-        c = self.__get_constraint(property, StringPatternConstraint)
+        c = self.get_constraint(property, StringPatternConstraint)
         if c is not None:
             return c.regex
         else:
@@ -624,7 +629,7 @@ class Model(ModelBase):
             raise Exception("Property must have type INT for a INT range constraint.")
         if (property.type != PropertyType.FLOAT and type(min) == float):
             raise Exception("Property must have type FLOAT for a FLOAT range constraint.")
-        c = self.__get_constraint(property, RangeConstraint)
+        c = self.get_constraint(property, RangeConstraint)
         if c is not None and min is not None and c.max is not None and min > c.max:
             raise Exception("Min range cannot be greater than max range.")
         if c is not None and min is None and c.max is None:
@@ -633,20 +638,20 @@ class Model(ModelBase):
         desc = None
         if c is not None:
             if min is not None and c.max is None:
-                desc = "Value must be at least {}.".format(min)
+                desc = "Value for property '{}' must be at least {}.".format(property.name, min)
             elif min is not None and c.max is not None:
-                desc = "Value must be between {} and {}".format(min, c.max)
+                desc = "Value  for property '{}' must be between {} and {}".format(property.name, min, c.max)
             elif min is None and c.max is not None:
-                desc = "Value must be at most {}.".format(c.max)
+                desc = "Value  for property '{}' must be at most {}.".format(property.name, c.max)
             c.min = min
             c.description = desc
         else:
-            c = RangeConstraint(self.model, property.name, desc, min, None)
-            self.graph.add_edge(property, c, edge_type=HasConstraint(self, property, c))
+            c = RangeConstraint(self.graph, property.name, "Value for property '{}' must be at least {}.".format(property.name, min), min, None)
+            self.graph.add_edge(property, c, edge_type=HasConstraint(property, c))
         return self
 
     def get_min_range(self, property:Property):
-        c = self.__get_constraint(property, RangeConstraint)
+        c = self.get_constraint(property, RangeConstraint)
         if c is not None:
             return c.min
         else:
@@ -657,7 +662,7 @@ class Model(ModelBase):
             raise Exception("Property must have type INT for a INT range constraint.")
         if (property.type != PropertyType.FLOAT and type(max) == float):
             raise Exception("Property must have type FLOAT for a FLOAT range constraint.")
-        c = self.__get_constraint(property, RangeConstraint)
+        c = self.get_constraint(property, RangeConstraint)
         if c is not None and c.min is not None and max is not None and c.min > max:
             raise Exception("Min range cannot be greater than max range.")
         if c is not None and c.min is None and max is None:
@@ -666,20 +671,20 @@ class Model(ModelBase):
         desc = None
         if c is not None:
             if c.min is not None and max is None:
-                desc = "Value must be at least {}.".format(c.min)
+                desc = "Value for property '{}' must be at least {}.".format(property.name, c.min)
             elif c.min is not None and max is not None:
-                desc = "Value must be between {} and {}".format(c.min, max)
+                desc = "Value for property '{}' must be between {} and {}".format(property.name, c.min, max)
             elif c.min is None and max is not None:
-                desc = "Value must be at most {}.".format(max)
+                desc = "Value for property '{}' must be at most {}.".format(property.name, max)
             c.max = max
             c.description = desc
         else:
-            c = RangeConstraint(self.model, self.name, desc, None, max)
-            self.model.add_edge(self, c, edge_type=HasConstraint(self, property, c))
+            c = RangeConstraint(self.graph, self.name, "Value for property '{}' must be at most {}.".format(property.name, max), None, max)
+            self.model.add_edge(self, c, edge_type=HasConstraint(property, c))
         return self
 
     def get_max_range(self, property:Property):
-        c = self.__get_constraint(property, RangeConstraint)
+        c = self.get_constraint(property, RangeConstraint)
         if c is not None:
             return c.max
         else:

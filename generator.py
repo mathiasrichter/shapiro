@@ -1,4 +1,4 @@
-from modeller import Model, Entity, EntityRef, Property, PropertyRef, PropertyType, ModelNode
+from modeller import Model, Entity, EntityRef, Property, PropertyRef, PropertyType, ModelNode, RelatedTo, ValidationConstraint, ValueMandatoryConstraint, StringLengthConstraint, StringPatternConstraint, RangeConstraint
 import json
 import validators
 
@@ -24,6 +24,8 @@ class Generator:
         return json.dumps(result, indent=2)
 
     def __get_iri(self, node:ModelNode) -> str:
+        if isinstance(node, RelatedTo):
+            return self.alias + ":" + node.name
         if isinstance(node, PropertyRef):
             return node.alias + ":" + node.name
         if isinstance(node, Property):
@@ -74,10 +76,9 @@ class Generator:
         Generate the dict representing the @graph entry in JSON-LD for this generator's model.
         """
         nodes = self.__properties()
-        nodes = nodes + self.__entities()
-        # Property constraints
-        # Entities & inheritance
-        # Relationships
+        nodes += self.__entities()
+        nodes += self.__relationships()
+        nodes += self.__constraints()
         return nodes
 
     def __properties(self) -> list[dict]:
@@ -85,17 +86,21 @@ class Generator:
         Generate the dict representing the property nodes into the JSON-LD graph.
         """
         result = []
+        iris = []
         properties = self.model.get_properties() + self.model.get_property_refs()
         for p in properties:
-            node = {}
-            node['@id'] = self.__get_iri(p)
-            node['@type'] = "rdf:Property"
-            node['rdfs:comment'] = p.description
-            node['schema:rangeIncludes'] = {"@id": self.__get_type(p.type)}
-            entities = list(map(lambda x: {"@id": self.__get_iri(x)}, self.model.get_entities_having(p)))
-            if len(entities) > 0:
-                node['schema:domainIncludes'] = entities
-            result.append(entities)
+            iri = self.__get_iri(p)
+            if iri not in iris:
+                node = {}
+                node['@id'] = iri
+                node['@type'] = "rdf:Property"
+                node['rdfs:comment'] = p.description
+                node['schema:rangeIncludes'] = {"@id": self.__get_type(p.type)}
+                entities = list(map(lambda x: {"@id": self.__get_iri(x)}, self.model.get_entities_having(p)))
+                if len(entities) > 0:
+                    node['schema:domainIncludes'] = entities
+                iris.append(iri)
+                result.append(node)
         return result
 
     def __entities(self) -> list[dict]:
@@ -107,10 +112,87 @@ class Generator:
         for e in entities:
             node = {}
             node['@id'] = self.__get_iri(e)
-            node['@type'] = "rdf:Class"
+            node['@type'] = 'rdf:Class'
             node['rdfs:comment'] = e.description
-            subclasses = list(map(lambda x: {"@id": self.__get_iri(x)}, self.model.get_superclasses(e)))
+            subclasses = list(map(lambda x: {'@id': self.__get_iri(x)}, self.model.get_superclasses(e)))
             if len(subclasses) > 0:
                 node['rdfs:subClassOf'] = subclasses
             result.append(node)
         return result
+
+    def __relationships(self) -> list[dict]:
+        """
+        Generate the dict representing the relationships into the JSON-LD graph.
+        """
+        result = []
+        iris = []
+        for r in self.model.get_relationships():
+            iri = self.__get_iri(r)
+            if iri not in iris:
+                node = {}
+                node['@id'] = iri
+                node['@type'] = 'rdf:Property'
+                node['rdfs:comment'] = r.description
+                node['schema:rangeIncludes'] = {"@id": self.__get_iri(r.target)}
+                node['schema:domainIncludes'] = list(map(lambda x: {'@id': self.__get_iri(x.source)}, self.model.get_relationships_to(r.target)))
+                iris.append(iri)
+                result.append(node)
+        return result
+
+    def __constraints(self) -> list[dict]:
+        """
+        Generate constrainst for entities and their properties/relationships.
+        """
+        result = []
+        iris = []
+        entities = self.model.get_entities() + self.model.get_entity_refs()
+        for e in entities:
+            iri = self.__get_iri(e)
+            if iri not in iris:
+                node = {}
+                node['@id'] = iri + 'Validation'
+                node['@type'] = 'sh:NodeShape'
+                node['sh:targetClass'] = { '@id': iri }
+                constraints = self.__property_constraints(e)
+                node['sh:property'] = constraints
+                # Relationship constraints
+                # model constraints? (every entity/property must have a description, etc.)
+                iris.append(iri)
+                if len(constraints) > 0:
+                    result.append(node)
+        return result
+
+    def __property_constraints(self, entity) -> list[dict]:
+        """
+        Generate constrainst for the properties of the specified entity.
+        """
+        result = []
+        for p in self.model.get_properties_of(entity):
+            iri = self.__get_iri(p)
+            t_node = {}
+            t_node['sh:path'] = { '@id': iri }
+            t_node['sh:type'] = self.__get_type(p.type)
+            result.append(t_node)
+            for c in self.model.get_constraints(p):
+                node = {}
+                node['sh:path'] = { '@id': iri }
+                self.__set_constraint_details(c, node)
+                result.append(node)
+        return result
+
+    def __set_constraint_details(self, constraint: ValidationConstraint, data:dict):
+        if isinstance(constraint, ValueMandatoryConstraint):
+            data['sh:minCount'] = 1
+        if isinstance(constraint, StringLengthConstraint):
+            if constraint.min_length is not None:
+                data['sh:minLength'] = constraint.min_length
+            if constraint.max_length is not None:
+                data['sh:maxLength'] = constraint.max_length
+        if isinstance(constraint, StringPatternConstraint):
+            data['sh:pattern'] = constraint.regex
+        if isinstance(constraint, RangeConstraint):
+            if constraint.min is not None:
+                data['sh:minInclusive'] = constraint.min
+            if constraint.max is not None:
+                data['sh:maxInclusive'] = constraint.max
+        data['sh:message'] = constraint.description
