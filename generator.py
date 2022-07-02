@@ -1,6 +1,16 @@
 from modeller import Model, Entity, EntityRef, Property, PropertyRef, PropertyType, ModelNode, RelatedTo, ValidationConstraint, ValueMandatoryConstraint, StringLengthConstraint, StringPatternConstraint, RangeConstraint
 import json
 import validators
+from datetime import date, time
+
+def datetime_converter(o):
+    """
+    Help the JSON module serialize date/time/datetime values.
+    """
+    if isinstance(o, date): # also covers datetime
+        return o.__str__()
+    if isinstance(o, time):
+        return o.__str__()
 
 class Generator:
     """
@@ -21,7 +31,7 @@ class Generator:
         result = {}
         result['@context'] = self.__context()
         result['@graph'] = self.__graph()
-        return json.dumps(result, indent=2)
+        return json.dumps(result, indent=2, default=datetime_converter)
 
     def __get_iri(self, node:ModelNode) -> str:
         if isinstance(node, RelatedTo):

@@ -3,6 +3,7 @@ from enum import Enum
 import requests
 import util
 import typing
+from datetime import date, time, datetime
 
 class PropertyType(Enum):
     """
@@ -629,6 +630,12 @@ class Model(ModelBase):
             raise Exception("Property must have type INT for a INT range constraint.")
         if (property.type != PropertyType.FLOAT and type(min) == float):
             raise Exception("Property must have type FLOAT for a FLOAT range constraint.")
+        if (property.type != PropertyType.DATE and type(min) == date):
+            raise Exception("Property must have type DATE for a date range constraint.")
+        if (property.type != PropertyType.TIME and type(min) == time):
+            raise Exception("Property must have type TIME for a time range constraint.")
+        if (property.type != PropertyType.DATETIME and type(min) == datetime):
+            raise Exception("Property must have type DATETIME for a datetime range constraint.")
         c = self.get_constraint(property, RangeConstraint)
         if c is not None and min is not None and c.max is not None and min > c.max:
             raise Exception("Min range cannot be greater than max range.")
@@ -662,6 +669,12 @@ class Model(ModelBase):
             raise Exception("Property must have type INT for a INT range constraint.")
         if (property.type != PropertyType.FLOAT and type(max) == float):
             raise Exception("Property must have type FLOAT for a FLOAT range constraint.")
+        if (property.type != PropertyType.DATE and type(min) == date):
+            raise Exception("Property must have type DATE for a date range constraint.")
+        if (property.type != PropertyType.TIME and type(min) == time):
+            raise Exception("Property must have type TIME for a time range constraint.")
+        if (property.type != PropertyType.DATETIME and type(min) == datetime):
+            raise Exception("Property must have type DATETIME for a datetime range constraint.")
         c = self.get_constraint(property, RangeConstraint)
         if c is not None and c.min is not None and max is not None and c.min > max:
             raise Exception("Min range cannot be greater than max range.")
