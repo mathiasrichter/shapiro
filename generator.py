@@ -1,4 +1,4 @@
-from modeller import Model, Entity, EntityRef, Property, PropertyRef, PropertyType, ModelNode, RelatedTo, ValidationConstraint, ValueMandatoryConstraint, StringLengthConstraint, StringPatternConstraint, RangeConstraint
+from modeller import Model, Entity, EntityRef, Property, PropertyRef, PropertyType, ModelNode, RelatedTo, ValidationConstraint, ValueMandatoryConstraint, StringLengthConstraint, StringPatternConstraint, RangeConstraint, Cardinality
 import json
 import validators
 from datetime import date, time
@@ -164,8 +164,8 @@ class Generator:
                 node['@type'] = 'sh:NodeShape'
                 node['sh:targetClass'] = { '@id': iri }
                 constraints = self.__property_constraints(e)
+                constraints += self.__relationship_constraints(e)
                 node['sh:property'] = constraints
-                # Relationship constraints
                 # model constraints? (every entity/property must have a description, etc.)
                 iris.append(iri)
                 if len(constraints) > 0:
@@ -174,7 +174,7 @@ class Generator:
 
     def __property_constraints(self, entity) -> list[dict]:
         """
-        Generate constrainst for the properties of the specified entity.
+        Generate constraints for the properties of the specified entity.
         """
         result = []
         for p in self.model.get_properties_of(entity):
@@ -190,9 +190,37 @@ class Generator:
                 result.append(node)
         return result
 
+    def __relationship_constraints(self, entity:Entity) -> list[dict]:
+        """
+        Generate constraints for the relationships of the specified entity.
+        """
+        result = []
+        for r in self.model.get_relationships_from(entity):
+            iri = self.__get_iri(r)
+            node = {}
+            node['sh:path'] = { '@id': iri }
+            node['sh:type'] = self.__get_iri(r.target)
+            if r.cardinality == Cardinality.ONE:
+                node['sh:minCount'] = 1
+                node['sh:maxCount'] = 1
+                node['sh:message'] = "A {} must be associated with one {}.".format(r.source.name, r.target.name)
+            elif r.cardinality == Cardinality.ZERO_TO_ONE:
+                node['sh:minCount'] = 0
+                node['sh:maxCount'] = 1
+                node['sh:message'] = "A {} must be associated with zero or one {}.".format(r.source.name, r.target.name)
+            elif r.cardinality == Cardinality.ONE_TO_MANY:
+                node['sh:minCount'] = 1
+                node['sh:message'] = "A {} must be associated with one or more {}.".format(r.source.name, r.target.name)
+            elif r.cardinality == Cardinality.ZERO_TO_MANY:
+                node['sh:minCount'] = 0
+                node['sh:message'] = "A {} must be associated with zero or more {}.".format(r.source.name, r.target.name)
+            result.append(node)
+        return result
+
     def __set_constraint_details(self, constraint: ValidationConstraint, data:dict):
         if isinstance(constraint, ValueMandatoryConstraint):
             data['sh:minCount'] = 1
+            data['sh:maxCount'] = 1
         if isinstance(constraint, StringLengthConstraint):
             if constraint.min_length is not None:
                 data['sh:minLength'] = constraint.min_length
