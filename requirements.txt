@@ -1,5 +1,6 @@
 fastapi
 fastapi-openapi-generator
+networkx
 pandas
 rdflib
 requests
