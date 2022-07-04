@@ -39,7 +39,7 @@ This is extremely experimental while I am trying to get my head around how to ac
 - get a schema stored in the repository by its IRI
 - get an element of a schema in the repository by its IRI
 - add a schema with a specific name or update the schema under that name (without validation yet as I cannot seem to find a JSON-LD validator)
-- the modeller is work in progress: you can express a model in plain Python, but the JSON-LD/SHACL generation is not yet available (under development).
+- the modeller is work in progress: you can express a model in plain Python and a first version of 
 
 [`shapiro.py`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro-server.py) is a very tactical FastAPI implementation of these operations reading schemas from a specific location in the filesystem of the server hosting Shapiro (current code just uses '.').
 
