@@ -1,6 +1,6 @@
 import streamlit as st
-from multipage import Page
-import util as util
+from ui.multipage import Page
+import util
 import pandas as pd
 import json
 import validators
@@ -38,7 +38,7 @@ class VisualizeElement:
             if validators.url(value):
                 result = result.format(util.uri_link(self.context, key, self.compact), '<a href="{}">{}</a>'.format(value, value))
             else:
-                result = result.format(util.uri_link(self.context, key, self.compact), value)
+                result = result.format(util.uri_link(self.context, key, self.compact), util.uri_link(self.context, value, self.compact))
         return result
 
     def elem_html(self, element):
@@ -63,8 +63,8 @@ class ElementBrowser(Page):
     def prep_data(self, schema_name, type=None):
         self.elem_by_id = {}
         self.elements = []
-        self.context = util.get(st.session_state['SERVER'] + schema_name + "/context/")
-        for elem in util.get(st.session_state['SERVER'] + schema_name + "/elements/"):
+        self.context = util.get(st.session_state['CONFIG'].getServer() + schema_name + "/context/")
+        for elem in util.get(st.session_state['CONFIG'].getServer() + schema_name + "/elements/"):
             if type is None or elem['@type'] == type:
                 self.elem_by_id[elem['@id']] = elem
                 self.elements.append(elem)
@@ -83,7 +83,7 @@ class ElementBrowser(Page):
         nodes = []
         edges = []
         graph = Graph()
-        graph.parse(st.session_state['SERVER'] + schema_name, format='application/ld+json')
+        graph.parse(st.session_state['CONFIG'].getServer() + schema_name, format='application/ld+json')
         for s, p, o in graph:
             s_id = str(s)
             s_label = util.compact(self.context, s_id)
@@ -109,7 +109,7 @@ class ElementBrowser(Page):
 
     def run(self):
         st.title("Schema Element Browser")
-        names = util.get(st.session_state['SERVER'] + 'schemas')
+        names = util.get(st.session_state['CONFIG'].getServer() + 'schemas')
         compact = st.checkbox('Compact attribute names', True)
         col1, col2, col3 = st.columns(3)
         with col1:

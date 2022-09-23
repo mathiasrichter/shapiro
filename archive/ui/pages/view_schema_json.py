@@ -1,6 +1,6 @@
 import streamlit as st
-from multipage import Page
-import util as util
+from ui.multipage import Page
+import util
 import json
 
 class ViewSchemaJson(Page):
@@ -11,10 +11,10 @@ class ViewSchemaJson(Page):
     def run(self):
         st.title("View Schema Source")
         try:
-            names = util.get(st.session_state['SERVER'] + 'schemas')
+            names = util.get(st.session_state['CONFIG'].getServer() + 'schemas')
             schema_name = st.selectbox('Available Schemas', names, index=1)
             try:
-                schema_data = util.get(st.session_state['SERVER']+schema_name)
+                schema_data = util.get(st.session_state['CONFIG'].getServer()+schema_name)
                 st.download_button(
                      label="Download",
                      data=json.dumps(schema_data),

@@ -1,6 +1,6 @@
 import validators
 import streamlit as st
-from multipage import Page
+from ui.multipage import Page
 
 class ConfigPage(Page):
 
@@ -10,7 +10,7 @@ class ConfigPage(Page):
     def run(self):
         st.title('Shapiro UI Configuration')
         with st.form("Shapiro API URL"):
-            url = st.text_input('Shapiro API URL', st.session_state['SERVER'])
+            url = st.text_input('Shapiro API URL', st.session_state['CONFIG'].getServer())
             update = st.form_submit_button("Update")
             if update:
                 if not validators.url(url):

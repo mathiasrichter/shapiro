@@ -1,6 +1,6 @@
 import streamlit as st
-from multipage import Page
-import util as util
+from ui.multipage import Page
+import util
 import pandas as pd
 from st_aggrid import AgGrid
 
@@ -16,9 +16,9 @@ class StartPage(Page):
         data = {}
         data[self.NAME] = []
         data[self.URL] = []
-        for n in util.get(st.session_state['SERVER'] + 'schemas'):
+        for n in util.get(st.session_state['CONFIG'].getServer() + 'schemas'):
             data[self.NAME].append(n)
-            data[self.URL].append('{}{}'.format(st.session_state['SERVER'], n))
+            data[self.URL].append('{}{}'.format(st.session_state['CONFIG'].getServer(), n))
         return data
 
     def load_schema(name):
@@ -27,7 +27,7 @@ class StartPage(Page):
     def run(self):
         st.title('Shapiro UI')
         st.write('A browser/editor for JSON-LD Schemas served by Shapiro.')
-        st.write("Using Shapiro Server at '{}'".format(st.session_state['SERVER']))
+        st.write("Using Shapiro Server at '{}'".format(st.session_state['CONFIG'].getServer()))
         st.header('Available Schemas')
         data = self.prep_data()
         rows = len(data.keys()) + 1

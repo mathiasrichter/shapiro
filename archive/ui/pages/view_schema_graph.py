@@ -1,6 +1,6 @@
 import streamlit as st
-from multipage import Page
-import util as util
+from ui.multipage import Page
+import util
 from rdflib import Graph
 from streamlit_agraph import Node, Edge, Config, agraph
 
@@ -14,16 +14,15 @@ class ViewSchemaGraph(Page):
                         height=500,
                         directed=True,
                         nodeHighlightBehavior=True,
-                        highlightColor="#F7A7A6", # or "blue"
+                        highlightColor="#F7A7A6",
                         collapsible=True,
                         node={'labelProperty':'label'},
                         link={'labelProperty': 'label', 'renderLabel': True}
-                        # **kwargs e.g. node_size=1000 or node_color="blue"
                         )
         nodes = []
         edges = []
         graph = Graph()
-        graph.parse(st.session_state['SERVER'] + schema_name, format='application/ld+json')
+        graph.parse(st.session_state['CONFIG'].getServer() + schema_name, format='application/ld+json')
         for s, p, o in graph:
             s_id = str(s)
             s_label = util.compact(context, s_id)
@@ -39,9 +38,9 @@ class ViewSchemaGraph(Page):
     def run(self):
         st.title("View Schema Graph")
         try:
-            names = util.get(st.session_state['SERVER'] + 'schemas')
+            names = util.get(st.session_state['CONFIG'].getServer() + 'schemas')
             schema_name = st.selectbox('Available Schemas', names, index=1)
-            context = util.get(st.session_state['SERVER'] + schema_name + "/context/")
+            context = util.get(st.session_state['CONFIG'].getServer() + schema_name + "/context/")
             self.prep_graph(schema_name, context)
         except Exception as x:
                 st.error('Could not retrieve schema names from Shapiro Server: {}'.format(x))

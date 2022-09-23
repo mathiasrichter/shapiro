@@ -1,9 +1,10 @@
 import streamlit as st
-from multipage import MultiPage
-from pages import start, config, view_schema_json, element_browser, view_schema_graph, schema_editor
+from ui.multipage import MultiPage
+from ui.pages import start, config, view_schema_json, element_browser, view_schema_graph, schema_editor
+from ui.configuration import Configuration
 
-if 'SERVER' not in st.session_state:
-    st.session_state['SERVER'] = 'http://localhost:8000/'
+if 'CONFIG' not in st.session_state:
+    st.session_state['CONFIG'] = Configuration()
 
 app = MultiPage('Shapiro UI')
 

@@ -67,6 +67,13 @@ class AbstractSchemaStore(ABC):
         """
         pass
 
+    @abstractmethod
+    def save(self, schema_name):
+        """
+        Save the specified schema to persistent store.
+        """
+        pass
+
 class DefaultSchemaStore(AbstractSchemaStore):
     """
     Naive default implementation of schema store.
@@ -133,3 +140,9 @@ class DefaultSchemaStore(AbstractSchemaStore):
         if schema is not None:
             return schema['@context']
         return None
+
+    def save(self, schema_name):
+        schema = self.find_schema(schema_name)
+        if schema is not None:
+            with open(self.schema_path + schema_name + self.schema_suffix, 'w') as f:
+                json.dump(schema, f)
