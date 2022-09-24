@@ -1,8 +1,7 @@
 from fastapi import FastAPI, Response, Request, status, Header
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 import logging
 import os
+from rdflib import Graph
 
 log = logging.getLogger("uvicorn")
 
@@ -45,15 +44,40 @@ def get_schema(request:Request, response:Response, accept_header=Header(None)):
     if accept_header is None:
         accept_header=''
     log.info("Retrieving schema '{}' with accept-headers '{}'".format(path, accept_header))
-    print(get_ranked_mime_types(accept_header))
-    print(negotiate(accept_header))
-    result = "pretending I've got a schema"
+    result = resolve(accept_header, path)
     if result is None:
         response.status_code=status.HTTP_404_NOT_FOUND
         err_msg = "Schema '{}' not found".format(path)
         log.error(err_msg)
         return err_msg
-    return JSONResponse(content=jsonable_encoder(result), media_type="application/ld+json")
+    return result
+
+def resolve(accept_header:str, path:str):
+    mime_type = negotiate(accept_header)
+    filename = map_filename(path)
+    if filename is None:
+        return None
+    f = open(filename, 'r')
+    content = f.read()
+    f.close()
+    return convert(filename, content, mime_type)
+
+def convert(filename:str, content:str, mime_type:str):
+    if mime_type == MIME_JSONLD:
+        if filename.endswith(SUFFIX_JSONLD):
+            return content
+        if filename.endswith(SUFFIX_TURTLE):
+            g = Graph()
+            g.parse(filename)
+            return g.serialize(format='ttl')
+    if mime_type == MIME_TTL:
+        if filename.endswith(SUFFIX_JSONLD):
+            g = Graph()
+            g.parse(filename)
+            return g.serialize(format='json-ld')
+        if filename.endswith(SUFFIX_TURTLE):
+            return content
+    log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
 
 def map_filename(path:str):
     """
@@ -67,14 +91,13 @@ def map_filename(path:str):
         if os.path.isfile(current):
             return current
     # it is not, so assume that last element of the path is an element in the file
-    full_path =  fullpath[0:full_path.rfind(PATH_SEP)]
+    full_path =  full_path[0:full_path.rfind(PATH_SEP)]
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
         if os.path.isfile(current):
             return current
-    log.error("Could not map '{}' to a supported schema file with one of the suffixes '{}'.".format(path, SUPPORTED_SUFFIXES))
+    log.error("Could not map '{}' to a schema file with one of the supported suffixes {}.".format(path, SUPPORTED_SUFFIXES))
     return None
-
 
 def get_ranked_mime_types(accept_header:str):
     """
