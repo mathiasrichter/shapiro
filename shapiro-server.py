@@ -6,17 +6,6 @@ import os
 
 log = logging.getLogger("uvicorn")
 
-if CONTENT_DIR_ENV_VAR not in os.environ.keys() || os.environ[CONTENT_DIR_ENV_VAR] == '':
-    log.warn("No environment variable '{}' set - using current dir as default content directory.".format(CONTENT_DIR_ENV_VAR))
-    CONTENT_DIR = './'
-else:
-    CONTENT_DIR = os.environ[CONTENT_DIR_ENV_VAR]
-
-if not CONTENT_DIR.ends_with('/'):
-    CONTENT_DIR += '/'
-
-log.info("Using '{}' as content dir.".format(CONTENT_DIR))
-
 app = FastAPI()
 
 MIME_HTML = "text/html"
@@ -34,6 +23,17 @@ PATH_SEP = '/'
 SUPPORTED_MIME_TYPES = [MIME_HTML, MIME_JSONLD, MIME_TTL, MIME_JSONSCHEMA]
 
 CONTENT_DIR_ENV_VAR = 'SHAPIRO_CONTENT_DIR'
+
+if CONTENT_DIR_ENV_VAR not in os.environ.keys() or os.environ[CONTENT_DIR_ENV_VAR] == '':
+    log.warn("No environment variable '{}' set - using current dir as default content directory.".format(CONTENT_DIR_ENV_VAR))
+    CONTENT_DIR = './'
+else:
+    CONTENT_DIR = os.environ[CONTENT_DIR_ENV_VAR]
+
+if not CONTENT_DIR.endswith('/'):
+    CONTENT_DIR += '/'
+
+log.info("Using '{}' as content dir.".format(CONTENT_DIR))
 
 @app.on_event("startup")
 def init():
