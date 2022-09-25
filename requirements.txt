@@ -1,11 +1,4 @@
 fastapi
 fastapi-openapi-generator
-networkx
-pandas
 rdflib
 requests
-streamlit
-streamlit-ace
-streamlit-aggrid
-streamlit-agraph
-validators
