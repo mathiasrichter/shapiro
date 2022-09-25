@@ -13,8 +13,8 @@ MIME_TTL = "text/turtle"
 MIME_JSONSCHEMA = "application/json"
 MIME_DEFAULT = MIME_TTL
 
-SUFFIX_JSONLD = 'jsonld'
-SUFFIX_TTL = 'ttl'
+SUFFIX_JSONLD = '.jsonld'
+SUFFIX_TTL = '.ttl'
 SUPPORTED_SUFFIXES = [ SUFFIX_JSONLD, SUFFIX_TTL ]
 
 PATH_SEP = '/'
@@ -23,20 +23,18 @@ SUPPORTED_MIME_TYPES = [MIME_HTML, MIME_JSONLD, MIME_TTL, MIME_JSONSCHEMA]
 
 CONTENT_DIR_ENV_VAR = 'SHAPIRO_CONTENT_DIR'
 
-if CONTENT_DIR_ENV_VAR not in os.environ.keys() or os.environ[CONTENT_DIR_ENV_VAR] == '':
-    log.warn("No environment variable '{}' set - using current dir as default content directory.".format(CONTENT_DIR_ENV_VAR))
-    CONTENT_DIR = './'
-else:
-    CONTENT_DIR = os.environ[CONTENT_DIR_ENV_VAR]
-
-if not CONTENT_DIR.endswith('/'):
-    CONTENT_DIR += '/'
-
-log.info("Using '{}' as content dir.".format(CONTENT_DIR))
+CONTENT_DIR = './'
 
 @app.on_event("startup")
 def init():
     log.info("Welcome to Shapiro.")
+    if CONTENT_DIR_ENV_VAR not in os.environ.keys() or os.environ[CONTENT_DIR_ENV_VAR] == '':
+        log.warn("No environment variable '{}' set - using current dir as default content directory.".format(CONTENT_DIR_ENV_VAR))
+    else:
+        CONTENT_DIR = os.environ[CONTENT_DIR_ENV_VAR]
+    if not CONTENT_DIR.endswith('/'):
+        CONTENT_DIR += '/'
+    log.info("Using '{}' as content dir.".format(CONTENT_DIR))
 
 @app.get("/{_:path}",  status_code=200)
 def get_schema(request:Request, response:Response, accept_header=Header(None)):
@@ -45,6 +43,7 @@ def get_schema(request:Request, response:Response, accept_header=Header(None)):
         accept_header=''
     log.info("Retrieving schema '{}' with accept-headers '{}'".format(path, accept_header))
     result = resolve(accept_header, path)
+    print(result)
     if result is None:
         response.status_code=status.HTTP_404_NOT_FOUND
         err_msg = "Schema '{}' not found".format(path)
@@ -53,6 +52,10 @@ def get_schema(request:Request, response:Response, accept_header=Header(None)):
     return result
 
 def resolve(accept_header:str, path:str):
+    """
+    Resolve the specified path to one of the mime types
+    in the specified accept header.
+    """
     mime_type = negotiate(accept_header)
     filename = map_filename(path)
     if filename is None:
@@ -63,19 +66,27 @@ def resolve(accept_header:str, path:str):
     return convert(filename, content, mime_type)
 
 def convert(filename:str, content:str, mime_type:str):
+    """
+    Convert the content (from the specified filename) to the format
+    according to the specifiedmime type.
+    """
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
+            log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
             return content
         if filename.endswith(SUFFIX_TURTLE):
-            g = Graph()
-            g.parse(filename)
-            return g.serialize(format='ttl')
-    if mime_type == MIME_TTL:
-        if filename.endswith(SUFFIX_JSONLD):
+            log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
             g = Graph()
             g.parse(filename)
             return g.serialize(format='json-ld')
+    if mime_type == MIME_TTL:
+        if filename.endswith(SUFFIX_JSONLD):
+            log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
+            g = Graph()
+            g.parse(filename)
+            return g.serialize(format='ttl')
         if filename.endswith(SUFFIX_TURTLE):
+            log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
             return content
     log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
 
