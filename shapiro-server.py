@@ -38,18 +38,22 @@ def init():
 
 @app.get("/{_:path}",  status_code=200)
 def get_schema(request:Request, response:Response, accept_header=Header(None)):
+    """
+    Serve the ontology/schema/model under the specified path in the mime type
+    specified in the accept header.
+    Currently supported mime types are 'application/ld+json', 'text/turtle'.
+    """
     path = request.url.path[1:]
     if accept_header is None:
         accept_header=''
     log.info("Retrieving schema '{}' with accept-headers '{}'".format(path, accept_header))
     result = resolve(accept_header, path)
-    print(result)
     if result is None:
         response.status_code=status.HTTP_404_NOT_FOUND
         err_msg = "Schema '{}' not found".format(path)
         log.error(err_msg)
         return err_msg
-    return result
+    return Response(content=result['content'], media_type=result['mime_type'])
 
 def resolve(accept_header:str, path:str):
     """
@@ -73,22 +77,35 @@ def convert(filename:str, content:str, mime_type:str):
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
             log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
-            return content
+            return  {
+                        'content': content,
+                        'mime_type': mime_type
+                    }
         if filename.endswith(SUFFIX_TURTLE):
             log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
             g = Graph()
             g.parse(filename)
-            return g.serialize(format='json-ld')
+            return  {
+                        'content': g.serialize(format='json-ld'),
+                        'mime_type': mime_type
+                    }
     if mime_type == MIME_TTL:
         if filename.endswith(SUFFIX_JSONLD):
             log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
             g = Graph()
             g.parse(filename)
-            return g.serialize(format='ttl')
+            return  {
+                        'content': g.serialize(format='ttl'),
+                        'mime_type': mime_type
+                    }
         if filename.endswith(SUFFIX_TURTLE):
             log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
-            return content
+            return  {
+                        'content': content,
+                        'mime_type': mime_type
+                    }
     log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
+    return None
 
 def map_filename(path:str):
     """
