@@ -1,0 +1,112 @@
+[
+  {
+    "@id": "http://example.org/person#lastname",
+    "@type": [
+      "http://www.w3.org/2000/01/rdf-schema#Property"
+    ],
+    "http://schema.org/domainIncludes": [
+      {
+        "@id": "http://example.org/person#Person"
+      }
+    ],
+    "http://schema.org/rangeIncludes": [
+      {
+        "@id": "http://schema.org/Text"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#Comment": [
+      {
+        "@value": "The last name of a person."
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/person#firstname",
+    "@type": [
+      "http://www.w3.org/2000/01/rdf-schema#Property"
+    ],
+    "http://schema.org/domainIncludes": [
+      {
+        "@id": "http://example.org/person#Person"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#Comment": [
+      {
+        "@value": "The first name of a person."
+      }
+    ],
+    "http://www.w3.org/ns/shacl#datatype": [
+      {
+        "@id": "http://www.w3.org/2001/XMLSchema#string"
+      }
+    ],
+    "http://www.w3.org/ns/shacl#maxCount": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/ns/shacl#maxLength": [
+      {
+        "@value": 10
+      }
+    ],
+    "http://www.w3.org/ns/shacl#minCount": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/ns/shacl#minLength": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/ns/shacl#path": [
+      {
+        "@id": "http://example.org/person#firstname"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/person#Person",
+    "@type": [
+      "http://www.w3.org/2000/01/rdf-schema#Class"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#Comment": [
+      {
+        "@value": "A Person."
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/person#birthdate",
+    "@type": [
+      "http://www.w3.org/2000/01/rdf-schema#Property"
+    ],
+    "http://schema.org/domainIncludes": [
+      {
+        "@id": "http://example.org/person#Person"
+      }
+    ],
+    "http://schema.org/rangeIncludes": [
+      {
+        "@id": "http://schema.org/Date"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#Comment": [
+      {
+        "@value": "The birthdate of a person."
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/person#PersonShape",
+    "@type": [
+      "http://www.w3.org/ns/shacl#NodeShape"
+    ],
+    "http://www.w3.org/ns/shacl#targetClass": [
+      {
+        "@id": "http://example.org/person#Person"
+      }
+    ]
+  }
+]

@@ -1,0 +1,16 @@
+@prefix ex: <http://example.org/ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix schema: <http://schema.org/> .
+
+ex:GraphShape a sh:NodeShape ;
+  sh:targetClass schema:Person ;
+  sh:property [
+    sh:path      schema:name ;
+    sh:minCount  1 ;
+    sh:message   "A Person must have a name property."
+  ] ;
+  sh:property [
+    sh:path     schema:alias ;
+    sh:maxCount 1 ;
+    sh:message  "A Person must not have more than 1 alias."
+  ] .

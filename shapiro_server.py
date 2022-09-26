@@ -106,18 +106,24 @@ def map_filename(path:str):
     path maps to.
     """
     # is last element of the path the name of a file with one of the supported suffixes?
+    candidates = []
     full_path = CONTENT_DIR + path
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
         if os.path.isfile(current):
-            return current
+            candidates.append(current)
     # it is not, so assume that last element of the path is an element in the file
     full_path =  full_path[0:full_path.rfind(os.path.sep)]
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
         if os.path.isfile(current):
-            return current
-    log.error("Could not map '{}' to a schema file with one of the supported suffixes {}.".format(path, SUPPORTED_SUFFIXES))
+            candidates.append(current)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) == 0:
+        log.error("Could not map '{}' to a schema file with one of the supported suffixes {}.".format(path, SUPPORTED_SUFFIXES))
+    if len(candidates) > 0:
+        log.error("Multiple candidates found trying to map '{}' to a schema file with one of the supported suffixes {}: {}".format(path, SUPPORTED_SUFFIXES, candidates))
     return None
 
 def get_ranked_mime_types(accept_header:str):
