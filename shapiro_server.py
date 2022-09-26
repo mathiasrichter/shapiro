@@ -182,8 +182,8 @@ def get_args():
 def get_server(port:int, content_dir:str, log_level:str):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
-    if not CONTENT_DIR.endswith('/'):
-        CONTENT_DIR += '/'
+    if not CONTENT_DIR.endswith(os.path.sep):
+        CONTENT_DIR += os.path.sep
     config = uvicorn.Config(app, port=port, log_level=log_level)
     server = uvicorn.Server(config)
     return server
