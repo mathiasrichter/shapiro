@@ -2,3 +2,6 @@ fastapi
 fastapi-openapi-generator
 rdflib
 requests
+pytest
+uvicorn
+asyncio

@@ -1,11 +1,10 @@
+import uvicorn
+import asyncio
+import argparse
 from fastapi import FastAPI, Response, Request, status, Header
 import logging
 import os
 from rdflib import Graph
-
-log = logging.getLogger("uvicorn")
-
-app = FastAPI()
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -19,25 +18,21 @@ SUPPORTED_SUFFIXES = [ SUFFIX_JSONLD, SUFFIX_TTL ]
 
 PATH_SEP = '/'
 
-SUPPORTED_MIME_TYPES = [MIME_HTML, MIME_JSONLD, MIME_TTL, MIME_JSONSCHEMA]
+SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
 
-CONTENT_DIR_ENV_VAR = 'SHAPIRO_CONTENT_DIR'
+CONTENT_DIR = None
 
-CONTENT_DIR = './'
+log = logging.getLogger("uvicorn")
+
+app = FastAPI()
 
 @app.on_event("startup")
 def init():
     log.info("Welcome to Shapiro.")
-    if CONTENT_DIR_ENV_VAR not in os.environ.keys() or os.environ[CONTENT_DIR_ENV_VAR] == '':
-        log.warn("No environment variable '{}' set - using current dir as default content directory.".format(CONTENT_DIR_ENV_VAR))
-    else:
-        CONTENT_DIR = os.environ[CONTENT_DIR_ENV_VAR]
-    if not CONTENT_DIR.endswith('/'):
-        CONTENT_DIR += '/'
     log.info("Using '{}' as content dir.".format(CONTENT_DIR))
 
 @app.get("/{_:path}",  status_code=200)
-def get_schema(request:Request, response:Response, accept_header=Header(None)):
+async def get_schema(request:Request, response:Response, accept_header=Header(None)):
     """
     Serve the ontology/schema/model under the specified path in the mime type
     specified in the accept header.
@@ -104,7 +99,7 @@ def convert(filename:str, content:str, mime_type:str):
                         'content': content,
                         'mime_type': mime_type
                     }
-    log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
+    log.warning("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
     return None
 
 def map_filename(path:str):
@@ -172,6 +167,32 @@ def negotiate(accept_header:str):
     """
     preferred = find_preferred_mime(accept_header)
     if preferred is None:
-        log.warn("No supported mime type found in accept header - resorting to default ({})".format(MIME_DEFAULT))
+        log.warning("No supported mime type found in accept header - resorting to default ({})".format(MIME_DEFAULT))
         preferred = MIME_DEFAULT
     return preferred
+
+def get_args():
+    """
+    Defines and parses the commandline parameters for running the server.
+    """
+    parser = argparse.ArgumentParser('Runs the Shapiro server.')
+    parser.add_argument('--port', help='The port for the server to receive requests on. Defaults to 8000.', type=int, default=8000)
+    parser.add_argument('--content_dir', help='The content directory to be used. Defaults to "./"', type=str, default='./')
+    parser.add_argument('--log_level', help='The log level to run with. Defaults to "info"', type=str, default='info')
+    return parser.parse_args()
+
+def get_server(port:int, content_dir:str, log_level:str):
+    global CONTENT_DIR
+    CONTENT_DIR = content_dir
+    if not CONTENT_DIR.endswith('/'):
+        CONTENT_DIR += '/'
+    config = uvicorn.Config(app, port=port, log_level=log_level)
+    server = uvicorn.Server(config)
+    return server
+
+async def start_server(port:int, content_dir:str, log_level:str):
+    await get_server(port, content_dir, log_level).serve()
+
+if __name__ == "__main__":
+    args = get_args()
+    asyncio.run(start_server(args.port, args.content_dir, args.log_level))
