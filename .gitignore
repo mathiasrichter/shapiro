@@ -1,9 +1,3 @@
-test.py
-testmodel.py
-testgen.py
-
-*.jsonld
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

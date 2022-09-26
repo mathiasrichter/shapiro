@@ -1,0 +1,245 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "https://schema.org/",
+    "shacl": "http://www.w3.org/ns/shacl#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "test": "http://example.org"
+  },
+  "@graph": [
+    {
+      "@id": "schema:additionalName",
+      "@type": "rdf:Property",
+      "rdfs:comment": "References property additionalName at https://schema.org/",
+      "schema:rangeIncludes": {
+        "@id": "xsd:string"
+      },
+      "schema:domainIncludes": [
+        {
+          "@id": "schema:Organization"
+        },
+        {
+          "@id": "test:Person"
+        }
+      ]
+    },
+    {
+      "@id": "test:birthdate",
+      "@type": "rdf:Property",
+      "rdfs:comment": "The birthdate of a being.",
+      "schema:rangeIncludes": {
+        "@id": "xsd:date"
+      },
+      "schema:domainIncludes": [
+        {
+          "@id": "test:Person"
+        }
+      ]
+    },
+    {
+      "@id": "test:age",
+      "@type": "rdf:Property",
+      "rdfs:comment": "The age of a being in years.",
+      "schema:rangeIncludes": {
+        "@id": "xsd:integer"
+      },
+      "schema:domainIncludes": [
+        {
+          "@id": "test:Person"
+        }
+      ]
+    },
+    {
+      "@id": "test:Thing",
+      "@type": "rdf:Class",
+      "rdfs:comment": "A thing."
+    },
+    {
+      "@id": "test:Being",
+      "@type": "rdf:Class",
+      "rdfs:comment": "A being that is alive or was alive in the past."
+    },
+    {
+      "@id": "test:Person",
+      "@type": "rdf:Class",
+      "rdfs:comment": "A person.",
+      "rdfs:subClassOf": [
+        {
+          "@id": "test:Being"
+        }
+      ]
+    },
+    {
+      "@id": "test:Address",
+      "@type": "rdf:Class",
+      "rdfs:comment": "An address."
+    },
+    {
+      "@id": "schema:Organization",
+      "@type": "rdf:Class",
+      "rdfs:comment": "References entity Organization at https://schema.org/",
+      "rdfs:subClassOf": [
+        {
+          "@id": "test:Thing"
+        }
+      ]
+    },
+    {
+      "@id": "test:Child",
+      "@type": "rdf:Class",
+      "rdfs:comment": "A child",
+      "rdfs:subClassOf": [
+        {
+          "@id": "test:Person"
+        }
+      ]
+    },
+    {
+      "@id": "schema:Organization",
+      "@type": "rdf:Class",
+      "rdfs:comment": "References entity Organization at https://schema.org/",
+      "rdfs:subClassOf": [
+        {
+          "@id": "test:Thing"
+        }
+      ]
+    },
+    {
+      "@id": "test:addresses",
+      "@type": "rdf:Property",
+      "rdfs:comment": "A person must have at least one address.",
+      "schema:rangeIncludes": {
+        "@id": "test:Address"
+      },
+      "schema:domainIncludes": [
+        {
+          "@id": "test:Person"
+        },
+        {
+          "@id": "test:Child"
+        }
+      ]
+    },
+    {
+      "@id": "test:PersonValidation",
+      "@type": "sh:NodeShape",
+      "sh:targetClass": {
+        "@id": "test:Person"
+      },
+      "sh:property": [
+        {
+          "sh:path": {
+            "@id": "test:birthdate"
+          },
+          "sh:type": "xsd:date"
+        },
+        {
+          "sh:path": {
+            "@id": "test:birthdate"
+          },
+          "sh:minCount": 1,
+          "sh:maxCount": 1,
+          "sh:message": "A value is mandatory for property 'birthdate'"
+        },
+        {
+          "sh:path": {
+            "@id": "test:birthdate"
+          },
+          "sh:minInclusive": "2022-07-04",
+          "sh:message": "Value for property 'birthdate' must be at least 2022-07-04."
+        },
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:type": "xsd:string"
+        },
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:minLength": 5,
+          "sh:maxLength": 100,
+          "sh:message": "String length for property 'additionalName' must be between 5 and 100."
+        },
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:pattern": "a*x",
+          "sh:message": "The value for property 'additionalName' must match pattern 'a*x'."
+        },
+        {
+          "sh:path": {
+            "@id": "test:age"
+          },
+          "sh:type": "xsd:integer"
+        },
+        {
+          "sh:path": {
+            "@id": "test:age"
+          },
+          "sh:minInclusive": 0,
+          "sh:maxInclusive": 120,
+          "sh:message": "Value for property 'age' must be between 0 and 120"
+        },
+        {
+          "sh:path": {
+            "@id": "test:addresses"
+          },
+          "sh:type": "test:Address",
+          "sh:minCount": 1,
+          "sh:message": "A Person must be associated with one or more Address."
+        }
+      ]
+    },
+    {
+      "@id": "schema:OrganizationValidation",
+      "@type": "sh:NodeShape",
+      "sh:targetClass": {
+        "@id": "schema:Organization"
+      },
+      "sh:property": [
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:type": "xsd:string"
+        },
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:minLength": 5,
+          "sh:maxLength": 100,
+          "sh:message": "String length for property 'additionalName' must be between 5 and 100."
+        },
+        {
+          "sh:path": {
+            "@id": "schema:additionalName"
+          },
+          "sh:pattern": "a*x",
+          "sh:message": "The value for property 'additionalName' must match pattern 'a*x'."
+        }
+      ]
+    },
+    {
+      "@id": "test:ChildValidation",
+      "@type": "sh:NodeShape",
+      "sh:targetClass": {
+        "@id": "test:Child"
+      },
+      "sh:property": [
+        {
+          "sh:path": {
+            "@id": "test:addresses"
+          },
+          "sh:type": "test:Address",
+          "sh:minCount": 1,
+          "sh:message": "A Child must be associated with one or more Address."
+        }
+      ]
+    }
+  ]
+}

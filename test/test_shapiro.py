@@ -1,9 +1,18 @@
 from fastapi.testclient import TestClient
-from ..shapiro_server import get_server
+from shapiro import shapiro_server
 
-client = TestClient(get_server(3333, './test/ontologies', 'info').serve)
+shapiro_server.CONTENT_DIR = './test/ontologies/'
 
-def test_get_existing_schema():
-    response = client.get("/person")
+client = TestClient(shapiro_server.app)
+
+def test_get_non_existing_schema():
+    response = client.get("/this_is_a_non_existing_ontology")
+    assert response.status_code == 404
+
+def test_get_existing_jsonld_schema_as_jsonld():
+    response = client.get("/person", headers={"accept-header": "application/ld+json"})
     assert response.status_code == 200
-    assert response.text == 'foo'
+
+def test_get_existing_jsonld_schema_as_ttl():
+    response = client.get("/person", headers={"accept-header": "text/turtle"})
+    assert response.status_code == 200
