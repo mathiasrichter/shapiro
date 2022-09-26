@@ -76,7 +76,7 @@ def convert(filename:str, content:str, mime_type:str):
                         'content': content,
                         'mime_type': mime_type
                     }
-        if filename.endswith(SUFFIX_TURTLE):
+        if filename.endswith(SUFFIX_TTL):
             log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
             g = Graph()
             g.parse(filename)
@@ -93,7 +93,7 @@ def convert(filename:str, content:str, mime_type:str):
                         'content': g.serialize(format='ttl'),
                         'mime_type': mime_type
                     }
-        if filename.endswith(SUFFIX_TURTLE):
+        if filename.endswith(SUFFIX_TTL):
             log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
             return  {
                         'content': content,
