@@ -16,8 +16,6 @@ SUFFIX_JSONLD = '.jsonld'
 SUFFIX_TTL = '.ttl'
 SUPPORTED_SUFFIXES = [ SUFFIX_JSONLD, SUFFIX_TTL ]
 
-PATH_SEP = '/'
-
 SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
 
 CONTENT_DIR = None
@@ -114,7 +112,7 @@ def map_filename(path:str):
         if os.path.isfile(current):
             return current
     # it is not, so assume that last element of the path is an element in the file
-    full_path =  full_path[0:full_path.rfind(PATH_SEP)]
+    full_path =  full_path[0:full_path.rfind(os.path.sep)]
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
         if os.path.isfile(current):
