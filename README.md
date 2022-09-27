@@ -22,7 +22,7 @@ Shapiro currently only implements the request to get a specific schema in JSON-L
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
-4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`).
+4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host`(default 127.0.0.1) `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`).
 5. Access the API at `http://localhost:8000`
 6. Access the API docs at `http://localhost:8000/docs`
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
