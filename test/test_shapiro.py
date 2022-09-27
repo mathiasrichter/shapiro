@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from shapiro import shapiro_server
+import os
 
 shapiro_server.CONTENT_DIR = './test/ontologies'
 
@@ -93,3 +94,6 @@ def test_get_existing_schema_with_uncovered_mime_type():
 def test_convert_with_unkown_mime_yields_none():
     result = shapiro_server.convert('irrelevantPath', 'irrelevantContent', 'fantasymimetype')
     assert result is None
+
+def test_init_on_startup():
+    shapiro_server.init()
