@@ -4,6 +4,7 @@ import argparse
 from fastapi import FastAPI, Response, Request, status, Header
 import logging
 import os
+import sys
 from rdflib import Graph
 
 MIME_HTML = "text/html"
@@ -65,7 +66,7 @@ def resolve(accept_header:str, path:str):
 def convert(filename:str, content:str, mime_type:str):
     """
     Convert the content (from the specified filename) to the format
-    according to the specifiedmime type.
+    according to the specified mime type.
     """
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
@@ -175,7 +176,7 @@ def negotiate(accept_header:str):
         preferred = MIME_DEFAULT
     return preferred
 
-def get_args():
+def get_args(args):
     """
     Defines and parses the commandline parameters for running the server.
     """
@@ -183,7 +184,7 @@ def get_args():
     parser.add_argument('--port', help='The port for the server to receive requests on. Defaults to 8000.', type=int, default=8000)
     parser.add_argument('--content_dir', help='The content directory to be used. Defaults to "./"', type=str, default='./')
     parser.add_argument('--log_level', help='The log level to run with. Defaults to "info"', type=str, default='info')
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 def get_server(port:int, content_dir:str, log_level:str):
     global CONTENT_DIR
@@ -198,5 +199,5 @@ async def start_server(port:int, content_dir:str, log_level:str):
     await get_server(port, content_dir, log_level).serve()
 
 if __name__ == "__main__":
-    args = get_args()
+    args = get_args(sys.argv[1:])
     asyncio.run(start_server(args.port, args.content_dir, args.log_level))
