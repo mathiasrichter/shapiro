@@ -1,0 +1,9 @@
+{
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#"
+    },
+
+    "@id": "12345",
+    "@type": "Person",
+    "name": "Bob"
+}

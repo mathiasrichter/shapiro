@@ -1,9 +1,16 @@
-@prefix ex: <http://example.org/ns#> .
+@prefix : <http://localhost:8000/com/example/org/person#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-ex:GraphShape a sh:NodeShape ;
-  sh:targetClass schema:Person ;
+:Person a rdfs:Class ;
+    rdfs:label "Person" ;
+    rdfs:comment "A person (alive, dead, undead, or fictional)." ;
+    rdfs:subClassOf schema:Thing
+    .
+
+:PersonShape a sh:NodeShape ;
+  sh:targetClass :Person ;
   sh:property [
     sh:path      schema:name ;
     sh:minCount  1 ;

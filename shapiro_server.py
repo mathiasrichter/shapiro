@@ -181,23 +181,27 @@ def get_args(args):
     Defines and parses the commandline parameters for running the server.
     """
     parser = argparse.ArgumentParser('Runs the Shapiro server.')
+    parser.add_argument('--host', help='The host for uvicorn to use. Defaults to 127.0.0.1', type=str, default='127.0.0.1')
     parser.add_argument('--port', help='The port for the server to receive requests on. Defaults to 8000.', type=int, default=8000)
     parser.add_argument('--content_dir', help='The content directory to be used. Defaults to "./"', type=str, default='./')
     parser.add_argument('--log_level', help='The log level to run with. Defaults to "info"', type=str, default='info')
     return parser.parse_args(args)
 
-def get_server(port:int, content_dir:str, log_level:str):
+def get_server(host:str, port:int, content_dir:str, log_level:str):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
     if not CONTENT_DIR.endswith(os.path.sep):
         CONTENT_DIR += os.path.sep
-    config = uvicorn.Config(app, port=port, log_level=log_level)
+    config = uvicorn.Config(app, host=host, port=port, log_level=log_level)
     server = uvicorn.Server(config)
     return server
 
-async def start_server(port:int, content_dir:str, log_level:str):
-    await get_server(port, content_dir, log_level).serve()
+async def start_server(host:str, port:int, content_dir:str, log_level:str):
+    await get_server(host, port, content_dir, log_level).serve()
+
+def main(args):
+    args = get_args(args)
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level))
 
 if __name__ == "__main__":
-    args = get_args(sys.argv[1:])
-    asyncio.run(start_server(args.port, args.content_dir, args.log_level))
+    main(sys.argv[1:])

@@ -1,0 +1,4 @@
+@prefix : <http://example.org/ns#> .
+@prefix p: <http://localhost:8000/com/example/org/person#> .
+
+:bob a p:Person .

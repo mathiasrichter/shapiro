@@ -7,17 +7,19 @@ shapiro_server.CONTENT_DIR = './test/ontologies'
 client = TestClient(shapiro_server.app)
 
 def test_get_server():
-    server = shapiro_server.get_server(8000, shapiro_server.CONTENT_DIR, 'info')
+    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info')
     assert server is not None
 
 def test_commandline_parse_to_default():
     args = shapiro_server.get_args([])
+    assert args.host == '127.0.0.1'
     assert args.port == 8000
     assert args.content_dir == './'
     assert args.log_level == 'info'
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--port', '1234', '--content_dir', './foo', '--log_level', 'bar'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar'])
+    assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
     assert args.log_level == 'bar'
@@ -94,6 +96,3 @@ def test_get_existing_schema_with_uncovered_mime_type():
 def test_convert_with_unkown_mime_yields_none():
     result = shapiro_server.convert('irrelevantPath', 'irrelevantContent', 'fantasymimetype')
     assert result is None
-
-def test_init_on_startup():
-    shapiro_server.init()

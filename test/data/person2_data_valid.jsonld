@@ -1,0 +1,10 @@
+{
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "schema": "http://schema.org/"
+    },
+
+    "@id": "12345",
+    "@type": "Person",
+    "schema:name": "Bob"
+}
