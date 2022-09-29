@@ -1,8 +1,8 @@
 fastapi
 rdflib
+pyshacl
 requests
 pytest
+pytest-cov
 uvicorn
 asyncio
-pytest
-pytest-cov

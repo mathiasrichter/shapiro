@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 from rdflib import Graph
+from pyshacl import validate
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -19,35 +20,75 @@ SUPPORTED_SUFFIXES = [ SUFFIX_JSONLD, SUFFIX_TTL ]
 
 SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
 
-CONTENT_DIR = None
+CONTENT_DIR = './'
+BAD_SCHEMAS = []
 
 log = logging.getLogger("uvicorn")
 
 app = FastAPI()
 
+class BadSchemaException(Exception):
+
+    def __init__(self):
+        pass
+
 @app.on_event("startup")
 def init():
     log.info("Welcome to Shapiro.")
     log.info("Using '{}' as content dir.".format(CONTENT_DIR))
+    log.info("Checking schema files.")
+    global BAD_SCHEMAS
+    BAD_SCHEMAS = check_schemas(CONTENT_DIR)
 
-@app.get("/{_:path}",  status_code=200)
-async def get_schema(request:Request, response:Response, accept_header=Header(None)):
+@app.get("/{schema_path:path}",  status_code=200)
+async def get_schema(schema_path:str, request:Request, response:Response, accept_header=Header(None)):
     """
-    Serve the ontology/schema/model under the specified path in the mime type
+    Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
     Currently supported mime types are 'application/ld+json', 'text/turtle'.
     """
-    path = request.url.path[1:]
     if accept_header is None:
         accept_header=''
-    log.info("Retrieving schema '{}' with accept-headers '{}'".format(path, accept_header))
-    result = resolve(accept_header, path)
-    if result is None:
-        response.status_code=status.HTTP_404_NOT_FOUND
-        err_msg = "Schema '{}' not found".format(path)
+    log.info("Retrieving schema '{}' with accept-headers '{}'".format(schema_path, accept_header))
+    try:
+        result = resolve(accept_header, schema_path)
+        if result is None:
+            response.status_code=status.HTTP_404_NOT_FOUND
+            err_msg = "Schema '{}' not found".format(schema_path)
+            log.error(err_msg)
+            return err_msg
+        return Response(content=result['content'], media_type=result['mime_type'])
+    except BadSchemaException:
+        response.status_code=status.HTTP_406_NOT_ACCEPTABLE
+        err_msg = "Schema '{}' is not syntactically correct or has other issues and cannot be served.".format(schema_path)
         log.error(err_msg)
         return err_msg
-    return Response(content=result['content'], media_type=result['mime_type'])
+
+def check_schemas(content_dir:str):
+    """
+    Traverse the CONTENT_DIR to verify each schema file with one of the supported suffixes
+    for syntactical correctness. This is to prevent issues at runtime.
+    Returns an array of "bad files".
+    """
+    result = []
+    for dir in os.walk(content_dir):
+        path = dir[0]
+        for filename in dir[2]:
+            suffix = filename[filename.rfind('.'):len(filename)]
+            full_name = path+os.path.sep+filename
+            if suffix in SUPPORTED_SUFFIXES:
+                try:
+                    g = Graph()
+                    g.parse(full_name)
+                except Exception as x:
+                    log.error("Cannot parse schema '{}':{}".format(full_name, x))
+                    result.append(full_name)
+    if len(result) > 0:
+        log.error("Found {} bad files: {}.".format(len(result), result))
+        log.error("Requests to serve these files will be reponded to with HTTP Status 406.")
+    else:
+        log.info("No bad schemas found.")
+    return result
 
 def resolve(accept_header:str, path:str):
     """
@@ -68,6 +109,8 @@ def convert(filename:str, content:str, mime_type:str):
     Convert the content (from the specified filename) to the format
     according to the specified mime type.
     """
+    if filename in BAD_SCHEMAS:
+        raise BadSchemaException()
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
             log.info("No conversion needed for '{}' and mime type '{}'".format(filename, mime_type))
@@ -98,7 +141,7 @@ def convert(filename:str, content:str, mime_type:str):
                         'content': content,
                         'mime_type': mime_type
                     }
-    log.warning("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
+    log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
     return None
 
 def map_filename(path:str):
@@ -185,23 +228,26 @@ def get_args(args):
     parser.add_argument('--port', help='The port for the server to receive requests on. Defaults to 8000.', type=int, default=8000)
     parser.add_argument('--content_dir', help='The content directory to be used. Defaults to "./"', type=str, default='./')
     parser.add_argument('--log_level', help='The log level to run with. Defaults to "info"', type=str, default='info')
+    parser.add_argument('--default_mime', help='The mime type to use for formatting served ontologies if the mimetype in the accept header is not available or usable. Defaults to "text/turtle"', type=str, default='text/turtle')
     return parser.parse_args(args)
 
-def get_server(host:str, port:int, content_dir:str, log_level:str):
+def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
     if not CONTENT_DIR.endswith(os.path.sep):
         CONTENT_DIR += os.path.sep
+    global MIME_DEFAULT
+    MIME_DEFAULT = default_mime
     config = uvicorn.Config(app, host=host, port=port, log_level=log_level)
     server = uvicorn.Server(config)
     return server
 
-async def start_server(host:str, port:int, content_dir:str, log_level:str):
-    await get_server(host, port, content_dir, log_level).serve()
+async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
+    await get_server(host, port, content_dir, log_level, default_mime).serve()
 
 def main(args):
     args = get_args(args)
-    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level))
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -4,11 +4,28 @@ import os
 
 shapiro_server.CONTENT_DIR = './test/ontologies'
 
+shapiro_server.init()
+
 client = TestClient(shapiro_server.app)
 
 def test_get_server():
-    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info')
+    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle')
     assert server is not None
+
+def test_bad_schema_checking_with_bad_schemas():
+    result = shapiro_server.check_schemas(shapiro_server.CONTENT_DIR)
+    assert len(result) == 2
+
+def test_bad_schema_checking_without_bad_schemas():
+    result = shapiro_server.check_schemas('./test/ontologies/com')
+    assert len(result) == 0
+
+def test_get_existing_bad_schemas():
+    response = client.get("/bad/person1_with_syntax_error")
+    assert response.status_code == 406
+    mime = 'application/ld+json'
+    response = client.get("/bad/person2_with_syntax_error", headers={"accept-header": mime})
+    assert response.status_code == 406
 
 def test_commandline_parse_to_default():
     args = shapiro_server.get_args([])
@@ -16,13 +33,15 @@ def test_commandline_parse_to_default():
     assert args.port == 8000
     assert args.content_dir == './'
     assert args.log_level == 'info'
+    assert args.default_mime == 'text/turtle'
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar'])
     assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
     assert args.log_level == 'bar'
+    assert args.default_mime == 'foobar'
 
 def test_get_non_existing_schema():
     response = client.get("/this_is_a_non_existing_ontology")
