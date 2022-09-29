@@ -2,11 +2,13 @@ import uvicorn
 import asyncio
 import argparse
 from fastapi import FastAPI, Response, Request, status, Header
+from fastapi.responses import JSONResponse
 import logging
 import os
 import sys
 from rdflib import Graph
-from pyshacl import validate
+import pyshacl
+import json
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -41,7 +43,7 @@ def init():
     BAD_SCHEMAS = check_schemas(CONTENT_DIR)
 
 @app.get("/{schema_path:path}",  status_code=200)
-async def get_schema(schema_path:str, request:Request, response:Response, accept_header=Header(None)):
+async def get_schema(schema_path:str, response:Response, accept_header=Header(None)):
     """
     Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
@@ -64,9 +66,49 @@ async def get_schema(schema_path:str, request:Request, response:Response, accept
         log.error(err_msg)
         return err_msg
 
+@app.post("/validate/{schema_path:path}", status_code=200)
+async def validate(schema_path:str, request:Request, response:Response):
+    """
+    Validate the data provided in the body of the request against the schema at the specified path.
+    Returns status 200 OK with a validation report in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport),
+    if processing succeeded and resulted in a validation report - note that the validation report
+    can still indicate that the provided data did not validate against the specified schema.
+    If processing failed due to issues parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
+    """
+    try:
+        content_type = request.headers.get("content-type", "")
+        supported = [MIME_TTL, MIME_JSONLD]
+        if content_type not in supported:
+            response.status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+            err_msg = "Data must be supplied as content-type one of '{}', not '{}''".format(supported, content_type)
+            log.error(err_msg)
+            return err_msg
+        data_format = None
+        if content_type == MIME_TTL:
+            data_format = 'ttl'
+        if content_type == MIME_JSONLD:
+            data_format = 'json-ld'
+        log.info("Validating data (formatted as {}) against schema {}.".format(data_format, request.url.path))
+        data = await request.body()
+        data_graph= Graph()
+        data_graph.parse(data, format=data_format)
+        schema_response = await get_schema(schema_path, response, MIME_TTL)
+        schema = schema_response.body
+        schema_graph = Graph()
+        schema_graph.parse(schema, format='ttl')
+        result = pyshacl.validate( data_graph, shacl_graph=schema_graph, inference='rdfs', serialize_report_graph='json-ld')
+        log.info("Successfully created validation report.")
+        report = json.loads(result[1])
+        return JSONResponse(content=report, media_type=MIME_JSONLD)
+    except Exception as x:
+        response.status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+        err_msg = "Could not validate provided data against schema {}. Error details: {}".format(request.url, x)
+        log.error(err_msg)
+        return err_msg
+
 def check_schemas(content_dir:str):
     """
-    Traverse the CONTENT_DIR to verify each schema file with one of the supported suffixes
+    Traverse the specified dir to verify each schema file with one of the supported suffixes
     for syntactical correctness. This is to prevent issues at runtime.
     Returns an array of "bad files".
     """
