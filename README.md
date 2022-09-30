@@ -14,6 +14,9 @@ Start out with providing a toolset from developers for developers for formulatin
 ## What is Shapiro
 Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serve up an organization's ontologies.
 
+## Hierarchical Namespaces
+Shapiro allows you to keep schemas/ontologies in arbitrary namespace hierarchies - simply by reflecting namespaces as a directory hierarchy. This allows organizations to separate their schemas/ontologies across a hierarchical namespace and avoid any clashes. This also means you can have a more realxed governance around the various ontologies/schemas across a collaborating community. The assumption is that you manage your schemas/ontologies in a code repository (Github, etc.) and manage releases form there onto a Shapiro instance serving these schemas in a specific environment (dev/test/prod).
+
 ## Current State
 Shapiro currently only implements the request to get a specific schema in JSON-LD or Turtle (HTML and JSON-SCHEMA to be implemented).
 Shapiro also offers validation of data (in JSONLD or TTL) against schemas/ontologies hosted on the local Shapiro server or on a remote server serving ontologies (e.g. schema.org).
@@ -47,4 +50,4 @@ This would look for the schema names `org/example/myschemas/person`on `localhost
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
 8. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.
 
-Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, content dir, log level, features).
+Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, content dir, log level, default mime type, features).

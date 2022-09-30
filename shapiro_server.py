@@ -131,7 +131,7 @@ def check_schemas(content_dir:str):
         path = dir[0]
         for filename in dir[2]:
             suffix = filename[filename.rfind('.'):len(filename)]
-            full_name = path+os.path.sep+filename
+            full_name = path+'/'+filename
             if suffix in SUPPORTED_SUFFIXES:
                 try:
                     g = Graph()
@@ -213,7 +213,7 @@ def map_filename(path:str):
         if os.path.isfile(current):
             candidates.append(current)
     # it is not, so assume that last element of the path is an element in the file
-    full_path =  full_path[0:full_path.rfind(os.path.sep)]
+    full_path =  full_path[0:full_path.rfind('/')]
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
         if os.path.isfile(current):
@@ -292,8 +292,8 @@ def get_args(args):
 def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
-    if not CONTENT_DIR.endswith(os.path.sep):
-        CONTENT_DIR += os.path.sep
+    if not CONTENT_DIR.endswith('/'):
+        CONTENT_DIR += '/'
     global MIME_DEFAULT
     MIME_DEFAULT = default_mime
     config = uvicorn.Config(app, host=host, port=port, log_level=log_level)
