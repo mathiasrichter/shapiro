@@ -46,3 +46,5 @@ This would look for the schema names `org/example/myschemas/person`on `localhost
 6. Access the API docs at `http://localhost:8000/docs`
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
 8. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.
+
+Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, content dir, log level, features).
