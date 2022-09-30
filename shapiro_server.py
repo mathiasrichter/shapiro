@@ -9,6 +9,7 @@ import sys
 from rdflib import Graph
 import pyshacl
 import json
+import copy
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -24,6 +25,7 @@ SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
 
 CONTENT_DIR = './'
 BAD_SCHEMAS = []
+ROUTES = None
 
 log = logging.getLogger("uvicorn")
 
@@ -92,10 +94,22 @@ async def validate(schema_path:str, request:Request, response:Response):
         data = await request.body()
         data_graph= Graph()
         data_graph.parse(data, format=data_format)
-        schema_response = await get_schema(schema_path, response, MIME_TTL)
-        schema = schema_response.body
-        schema_graph = Graph()
-        schema_graph.parse(schema, format='ttl')
+        elems = schema_path.split('/')
+        schema_graph = None
+        if '.' in elems[0] or ':' in elems[0] or 'localhost' in elems[0]:
+            # this is the host name of some other server, so let pyshacl resolve the URI
+            schema_graph = 'http://' + schema_path
+            log.info("Resolving remote schema at '{}'".format(schema_graph))
+        else:
+            # this is a schema on this server, so get the schema graph directly
+            schema_response = await get_schema(schema_path, response, MIME_TTL)
+            if type(schema_response) ==str: # no proper schema returned, just an error message
+                raise Exception("Schema '{}' not found on this server - do you have the right schema name or is the feature to serve schemas switched off in this server?".format(schema_path))
+            else:
+                schema = schema_response.body
+                schema_graph = Graph()
+                schema_graph.parse(schema, format='ttl')
+                log.info("Resolving local schema at '{}'".format(schema_path))
         result = pyshacl.validate( data_graph, shacl_graph=schema_graph, inference='rdfs', serialize_report_graph='json-ld')
         log.info("Successfully created validation report.")
         report = json.loads(result[1])
@@ -271,6 +285,8 @@ def get_args(args):
     parser.add_argument('--content_dir', help='The content directory to be used. Defaults to "./"', type=str, default='./')
     parser.add_argument('--log_level', help='The log level to run with. Defaults to "info"', type=str, default='info')
     parser.add_argument('--default_mime', help='The mime type to use for formatting served ontologies if the mimetype in the accept header is not available or usable. Defaults to "text/turtle"', type=str, default='text/turtle')
+    parser.add_argument('--features', help="What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate' (for validating data against ontologies) or 'all'. Default is 'all'.",
+        type=str, default='all', choices = ['all', 'serve', 'validate'])
     return parser.parse_args(args)
 
 def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
@@ -284,12 +300,28 @@ def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:
     server = uvicorn.Server(config)
     return server
 
-async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
-    await get_server(host, port, content_dir, log_level, default_mime).serve()
+def activate_routes(features:str):
+    """
+    Disable the routes according to the features spec ('serve' to onlky serve schemas, 'validate' to only validate schemas,
+    'all' to both serve and validate).
+    """
+    global ROUTES
+    if ROUTES is None:
+        ROUTES = copy.copy(app.routes) # save original list of routes
+    for r in ROUTES: # restore original list of routes
+        if r not in app.routes:
+            app.routes.append(r)
+    for r in app.routes:
+        if (features == 'validate' and r.name == 'get_schema') or (features == 'serve' and r.name == 'validate'):
+            app.routes.remove(r)
+
+async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str):
+    activate_routes(features)
+    server = await get_server(host, port, content_dir, log_level, default_mime).serve()
 
 def main(args):
     args = get_args(args)
-    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime))
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

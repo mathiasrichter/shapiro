@@ -162,3 +162,40 @@ def test_validate_with_syntax_error_jsonld_data():
 def test_validate_with_unsupported_data_content_type():
         response = client.post("/validate/com/example/org/person", "irrelevant", headers={"content-type": 'text/text'})
         assert response.status_code == 415
+
+def test_validate_with_remote_schema_that_cannot_be_found():
+    with open('./test/data/person2_data_valid.jsonld') as data_file:
+        response = client.post("/validate/schema.org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.status_code == 422
+
+def test_validate_with_local_schema_that_cannot_be_found():
+    with open('./test/data/person2_data_valid.jsonld') as data_file:
+        response = client.post("/validate/foo", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.status_code == 422
+
+def test_validate_with_remote_schema():
+    with open('./test/data/person2_data_valid.jsonld') as data_file:
+        response = client.post("/validate/www.w3.org/2000/01/rdf-schema", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_features_switching_only_serve():
+    shapiro_server.activate_routes('serve')
+    response = client.get("/person")
+    assert response.status_code == 200
+    response = client.post("/validate/com/example/org/person", "irrelevant content", headers={"content-type": shapiro_server.MIME_TTL})
+    # with the validate route disabled, the request will land with the get_schema route and therefore return a 405 (and not a 404)
+    assert response.status_code == 405
+
+def test_features_switching_only_validate():
+    shapiro_server.activate_routes('validate')
+    response = client.get("/person")
+    assert response.status_code == 404
+    with open('./test/data/person2_data_invalid.jsonld') as data_file:
+        response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.status_code == 200
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False

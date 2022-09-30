@@ -16,9 +16,14 @@ Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html
 
 ## Current State
 Shapiro currently only implements the request to get a specific schema in JSON-LD or Turtle (HTML and JSON-SCHEMA to be implemented).
-Shapiro also offers validation of data (in JSONLD or TTL) against schemas/ontologies hosted on Shapiro or arbitrary other schema repositories.
+Shapiro also offers validation of data (in JSONLD or TTL) against schemas/ontologies hosted on the local Shapiro server or on a remote server serving ontologies (e.g. schema.org).
 
-[`shapiro_server.py`](https://github.com/mathiasrichter/shapiro/blob/main/shapiro_server.py) is a very simple FastAPI implementation reading schemas from a specific location in the filesystem of the server hosting Shapiro (indicated by the content dir commandline parameter, defaulting to `./`).
+## Shapiro Features
+As mentioned above, Shapiro offers two features:
+
+
+## Validation with Shapiro
+Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API feature.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
