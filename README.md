@@ -18,12 +18,25 @@ Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html
 Shapiro currently only implements the request to get a specific schema in JSON-LD or Turtle (HTML and JSON-SCHEMA to be implemented).
 Shapiro also offers validation of data (in JSONLD or TTL) against schemas/ontologies hosted on the local Shapiro server or on a remote server serving ontologies (e.g. schema.org).
 
-## Shapiro Features
-As mentioned above, Shapiro offers two features:
-
-
 ## Validation with Shapiro
-Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API feature.
+Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API features (serving schemas and validating data against schemas).
+If both serving schemas and validation are activated, you can validate against schemas residing on the same Shapiro instance offering the validation:
+
+`http://localhost:8000/validate/org/example/myschemas/person`
+
+Posting against this url (with a request body containing the data to be validated), will get the schema named `org/example/myschemas/person` from `localhost:8000` to validate the data against. Obviously, this will not work if you've switched off the 'serve' feature on `localhost:8000`.
+
+Assume you want to validate your data against a schema sitting on a different schema server, you can do:
+
+`http://localhost:8000/validate/www.w3.org/ms/shacl/something`
+
+This would validate the data provided in the body of the post request against the schema served at `http://wwww3.org/ms/shacl` under the name of `something`.
+
+Assume you want to use one instance of Shapiro to just serve schemas, and another instance of Shapiro to just validate schemas. Assume the instance serving schemas sits under `localhost:8000` and the instance just validating schemas sits under `localhost:3333`. You would run your post request against the following URL:
+
+`http://localhost:3333/validate/localhost:8000/org/example/myschemas/person`
+
+This would look for the schema names `org/example/myschemas/person`on `localhost:8000` (the instance that just serves schemas) and validate the schema obtained from there in `localhost:8000` against the data provided in the body of the request.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
