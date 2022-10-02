@@ -137,6 +137,22 @@ def test_validate_with_uncompliant_jsonld_data():
         report = response.json()
         assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
 
+def test_validate_with_compliant_jsonld_list_data():
+    with open('./test/data/person_list1_data_valid.jsonld') as data_file:
+        response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_uncompliant_jsonld_list_data():
+    with open('./test/data/person_list1_data_invalid.jsonld') as data_file:
+        response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
 def test_validate_with_compliant_ttl_data():
     with open('./test/data/person1_data_valid.ttl') as data_file:
         response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
@@ -147,6 +163,22 @@ def test_validate_with_compliant_ttl_data():
 
 def test_validate_with_uncompliant_ttl_data():
     with open('./test/data/person1_data_invalid.ttl') as data_file:
+        response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+def test_validate_with_compliant_ttl_list_data():
+    with open('./test/data/person_list2_data_valid.ttl') as data_file:
+        response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_uncompliant_ttl_list_data():
+    with open('./test/data/person_list2_data_invalid.ttl') as data_file:
         response = client.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
         assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
