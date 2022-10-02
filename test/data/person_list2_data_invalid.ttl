@@ -1,0 +1,18 @@
+@prefix : <http://example.org/ns#> .
+@prefix p: <http://localhost:8000/com/example/org/person#> .
+@prefix schema: <http://schema.org/> .
+
+:bob a p:Person;
+schema:name "Bob"
+.
+
+:john a p:Person;
+schema:name "John"
+.
+
+:mary a p:Person;
+.
+
+:jane a p:Person;
+schema:name "Jane"
+.

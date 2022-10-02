@@ -1,0 +1,38 @@
+[
+  {
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "schema": "http://schema.org/"
+    },
+    "@id": "123456",
+    "@type": "Person",
+    "schema:name": "Bob"
+  },
+  {
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "schema": "http://schema.org/"
+    },
+    "@id": "123457",
+    "@type": "Person",
+    "NAME": "John"
+  },
+  {
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "schema": "http://schema.org/"
+    },
+    "@id": "123458",
+    "@type": "Person",
+    "NAME": "Mary"
+  },
+  {
+    "@context": {
+      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "schema": "http://schema.org/"
+    },
+    "@id": "123459",
+    "@type": "Person",
+    "schema:name": "Lisa"
+  }
+]
