@@ -15,7 +15,9 @@ def test_get_server():
 
 def test_bad_schema_checking_with_bad_schemas():
     result = shapiro_server.check_schemas(shapiro_server.CONTENT_DIR)
-    assert len(result) == 2
+    assert len(result) == 4
+    assert './test/ontologies/bad/person1_without_origin_on_this_server.jsonld' in shapiro_server.BAD_SCHEMAS
+    assert './test/ontologies/bad/person2_without_origin_on_this_server.ttl' in shapiro_server.BAD_SCHEMAS
 
 def test_bad_schema_checking_without_bad_schemas():
     result = shapiro_server.check_schemas('./test/ontologies/com')
@@ -23,7 +25,7 @@ def test_bad_schema_checking_without_bad_schemas():
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.check_schemas(shapiro_server.CONTENT_DIR)
-    assert len(result) == 2
+    assert len(result) == 4
     response = client.get("/bad/person1_with_syntax_error")
     assert response.status_code == 406
     mime = 'application/ld+json'

@@ -123,8 +123,8 @@ async def validate(schema_path:str, request:Request, response:Response):
 def check_schemas(content_dir:str):
     """
     Traverse the specified dir to verify each schema file with one of the supported suffixes
-    for syntactical correctness. This is to prevent issues at runtime.
-    Returns an array of "bad files".
+    for syntactical correctness and matching IRI in the schema for this server. This is to prevent issues at runtime.
+    Returns an array of "bad files", if there are any.
     """
     result = []
     for dir in os.walk(content_dir):
@@ -136,8 +136,19 @@ def check_schemas(content_dir:str):
                 try:
                     g = Graph()
                     g.parse(full_name)
+                    found = False
+                    schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]
+                    for ( s, p, o) in g:
+                        # want to be sure that the schema refers back to this server
+                        # at least once as a subject and/or an object
+                        if found is False:
+                            found = str(s).find(schema_path) > -1 or str(p).find(schema_path) > -1 or str(o).find(schema_path) > -1
+                        if found is True:
+                            break
+                    if found is False:
+                        raise Exception("Schema '{}' doesn't seem to have any origin on this server.")
                 except Exception as x:
-                    log.error("Cannot parse schema '{}':{}".format(full_name, x))
+                    log.error("Cannot process schema '{}':{}".format(full_name, x))
                     result.append(full_name)
     if len(result) > 0:
         log.error("Found {} bad files: {}.".format(len(result), result))

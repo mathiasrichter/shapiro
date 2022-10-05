@@ -1,53 +1,28 @@
 [
   {
-    "@id": "http://example.org/person#lastname",
+    "@id": "http://localhost:8000/dupes/person#GraphShape",
     "@type": [
-      "http://www.w3.org/2000/01/rdf-schema#Property"
+      "http://www.w3.org/ns/shacl#NodeShape"
     ],
-    "http://schema.org/domainIncludes": [
+    "http://www.w3.org/ns/shacl#property": [
       {
-        "@id": "http://example.org/person#Person"
+        "@id": "_:n13ce9eb1356242d090f904e13e94c4adb1"
+      },
+      {
+        "@id": "_:n13ce9eb1356242d090f904e13e94c4adb2"
       }
     ],
-    "http://schema.org/rangeIncludes": [
+    "http://www.w3.org/ns/shacl#targetClass": [
       {
-        "@id": "http://schema.org/Text"
-      }
-    ],
-    "http://www.w3.org/2000/01/rdf-schema#Comment": [
-      {
-        "@value": "The last name of a person."
+        "@id": "http://schema.org/Person"
       }
     ]
   },
   {
-    "@id": "http://example.org/person#firstname",
-    "@type": [
-      "http://www.w3.org/2000/01/rdf-schema#Property"
-    ],
-    "http://schema.org/domainIncludes": [
+    "@id": "_:n13ce9eb1356242d090f904e13e94c4adb1",
+    "http://www.w3.org/ns/shacl#message": [
       {
-        "@id": "http://example.org/person#Person"
-      }
-    ],
-    "http://www.w3.org/2000/01/rdf-schema#Comment": [
-      {
-        "@value": "The first name of a person."
-      }
-    ],
-    "http://www.w3.org/ns/shacl#datatype": [
-      {
-        "@id": "http://www.w3.org/2001/XMLSchema#string"
-      }
-    ],
-    "http://www.w3.org/ns/shacl#maxCount": [
-      {
-        "@value": 1
-      }
-    ],
-    "http://www.w3.org/ns/shacl#maxLength": [
-      {
-        "@value": 10
+        "@value": "A Person must have a name property."
       }
     ],
     "http://www.w3.org/ns/shacl#minCount": [
@@ -55,57 +30,27 @@
         "@value": 1
       }
     ],
-    "http://www.w3.org/ns/shacl#minLength": [
+    "http://www.w3.org/ns/shacl#path": [
+      {
+        "@id": "http://schema.org/name"
+      }
+    ]
+  },
+  {
+    "@id": "_:n13ce9eb1356242d090f904e13e94c4adb2",
+    "http://www.w3.org/ns/shacl#maxCount": [
       {
         "@value": 1
       }
     ],
+    "http://www.w3.org/ns/shacl#message": [
+      {
+        "@value": "A Person must not have more than 1 alias."
+      }
+    ],
     "http://www.w3.org/ns/shacl#path": [
       {
-        "@id": "http://example.org/person#firstname"
-      }
-    ]
-  },
-  {
-    "@id": "http://example.org/person#Person",
-    "@type": [
-      "http://www.w3.org/2000/01/rdf-schema#Class"
-    ],
-    "http://www.w3.org/2000/01/rdf-schema#Comment": [
-      {
-        "@value": "A Person."
-      }
-    ]
-  },
-  {
-    "@id": "http://example.org/person#birthdate",
-    "@type": [
-      "http://www.w3.org/2000/01/rdf-schema#Property"
-    ],
-    "http://schema.org/domainIncludes": [
-      {
-        "@id": "http://example.org/person#Person"
-      }
-    ],
-    "http://schema.org/rangeIncludes": [
-      {
-        "@id": "http://schema.org/Date"
-      }
-    ],
-    "http://www.w3.org/2000/01/rdf-schema#Comment": [
-      {
-        "@value": "The birthdate of a person."
-      }
-    ]
-  },
-  {
-    "@id": "http://example.org/person#PersonShape",
-    "@type": [
-      "http://www.w3.org/ns/shacl#NodeShape"
-    ],
-    "http://www.w3.org/ns/shacl#targetClass": [
-      {
-        "@id": "http://example.org/person#Person"
+        "@id": "http://schema.org/alias"
       }
     ]
   }
