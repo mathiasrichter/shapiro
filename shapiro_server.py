@@ -75,7 +75,7 @@ async def validate(schema_path:str, request:Request, response:Response):
     Returns status 200 OK with a validation report in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport),
     if processing succeeded and resulted in a validation report - note that the validation report
     can still indicate that the provided data did not validate against the specified schema.
-    If processing failed due to issues parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
+    If processing failed due to issues obtaining/parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
     """
     try:
         content_type = request.headers.get("content-type", "")
@@ -131,6 +131,9 @@ def check_schemas(content_dir:str):
         path = dir[0]
         for filename in dir[2]:
             suffix = filename[filename.rfind('.'):len(filename)]
+            if path.endswith('\\') or path.endswith('/') or path.endswith(os.path.sep):
+                # remove any potentially os-specific path separators
+                path = path[0:len(path)-1]
             full_name = path+'/'+filename
             if suffix in SUPPORTED_SUFFIXES:
                 try:
@@ -140,7 +143,7 @@ def check_schemas(content_dir:str):
                     schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]
                     for ( s, p, o) in g:
                         # want to be sure that the schema refers back to this server
-                        # at least once as a subject and/or an object
+                        # at least once in an RDF-triple
                         if found is False:
                             found = str(s).find(schema_path) > -1 or str(p).find(schema_path) > -1 or str(o).find(schema_path) > -1
                         if found is True:
