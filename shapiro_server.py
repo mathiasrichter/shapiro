@@ -129,12 +129,14 @@ def check_schemas(content_dir:str):
     result = []
     for dir in os.walk(content_dir):
         path = dir[0]
+        path = path.replace('\\', '/')
+        path = path.replace(os.path.sep, '/')
         for filename in dir[2]:
             suffix = filename[filename.rfind('.'):len(filename)]
-            if path.endswith('\\') or path.endswith('/') or path.endswith(os.path.sep):
-                # remove any potentially os-specific path separators
-                path = path[0:len(path)-1]
-            full_name = path+'/'+filename
+            if path.endswith('/'):
+                full_name = path+filename
+            else:
+                full_name = path + '/' + filename
             if suffix in SUPPORTED_SUFFIXES:
                 try:
                     g = Graph()
