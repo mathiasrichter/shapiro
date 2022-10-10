@@ -1,6 +1,6 @@
 {
     "@context": {
-      "@vocab": "http://localhost:8000/com/example/org/person#",
+      "@vocab": "http://127.0.0.1:8000/com/example/org/person#",
       "schema": "http://schema.org/"
     },
 

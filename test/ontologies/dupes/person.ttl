@@ -1,4 +1,4 @@
-@prefix ex: <http://localhost:8000/dupes/person#> .
+@prefix ex: <http://127.0.0.1:8000/dupes/person#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
 

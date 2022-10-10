@@ -1,6 +1,6 @@
 [
   {
-    "@id": "http://localhost:8000/dupes/person#GraphShape",
+    "@id": "http://127.0.0.1:8000/dupes/person#GraphShape",
     "@type": [
       "http://www.w3.org/ns/shacl#NodeShape"
     ],
