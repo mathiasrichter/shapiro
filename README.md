@@ -41,6 +41,8 @@ Assume you want to use one instance of Shapiro to just serve schemas, and anothe
 
 This would look for the schema names `org/example/myschemas/person`on `localhost:8000` (the instance that just serves schemas) and validate the schema obtained from there in `localhost:8000` against the data provided in the body of the request.
 
+You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined.
+
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
