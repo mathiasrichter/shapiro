@@ -7,7 +7,9 @@ shapiro_server.CONTENT_DIR = './test/ontologies'
 
 shapiro_server.init()
 
-client = TestClient(shapiro_server.app)
+client = TestClient(shapiro_server.app, 'http://127.0.0.1:8000') # need to use 127.0.0.1:8000 as base url to ensure tests succeed with test ontologies and test data
+
+client1 = TestClient(shapiro_server.app, 'http://localhost:8000') # try resolving against localhost instead 127.0.0.1
 
 def test_get_server():
     server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle')
@@ -237,3 +239,93 @@ def test_features_switching_only_validate():
         assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
         report = response.json()
         assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+###########################################################################################################################
+
+###########################################################################################################################
+
+def test_validate_with_inference_with_compliant_jsonld_data():
+    with open('./test/data/person2_data_valid.jsonld') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_inference_with_uncompliant_jsonld_data():
+    with open('./test/data/person2_data_invalid.jsonld') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+def test_validate_with_inference_with_compliant_jsonld_list_data():
+    with open('./test/data/person_list1_data_valid.jsonld') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_inference_with_uncompliant_jsonld_list_data():
+    with open('./test/data/person_list1_data_invalid.jsonld') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+def test_validate_with_inference_with_compliant_ttl_data():
+    with open('./test/data/person1_data_valid.ttl') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_inference_with_uncompliant_ttl_data():
+    with open('./test/data/person1_data_invalid.ttl') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+def test_validate_with_inference_with_compliant_ttl_list_data():
+    with open('./test/data/person_list2_data_valid.ttl') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True
+
+def test_validate_with_inference_with_uncompliant_ttl_list_data():
+    with open('./test/data/person_list2_data_invalid.ttl') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report['127.0.0.1:8000/com/example/org/person'][0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == False
+
+def test_validate_with_inference_with_syntax_error_ttl_data():
+    with open('./test/data/person1_data_syntax_error.ttl') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.status_code == 422
+
+def test_validate_with_inference_with_syntax_error_jsonld_data():
+    with open('./test/data/person2_data_syntax_error.jsonld') as data_file:
+        response = client.post("/validate/", data_file.read(), headers={"content-type": shapiro_server.MIME_JSONLD})
+        assert response.status_code == 422
+
+def test_validate_with_inference_with_unsupported_data_content_type():
+        response = client.post("/validate/", "irrelevant", headers={"content-type": 'text/text'})
+        assert response.status_code == 415
+
+def test_validate_with_localhost_with_compliant_ttl_list_data():
+    with open('./test/data/person_list2_data_valid.ttl') as data_file:
+        response = client1.post("/validate/com/example/org/person", data_file.read(), headers={"content-type": shapiro_server.MIME_TTL})
+        assert response.headers['content-type'].startswith(shapiro_server.MIME_JSONLD)
+        assert response.status_code == 200
+        report = response.json()
+        assert report[0]['http://www.w3.org/ns/shacl#conforms'][0]['@value'] == True

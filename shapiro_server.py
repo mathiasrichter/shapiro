@@ -3,6 +3,7 @@ import asyncio
 import argparse
 from fastapi import FastAPI, Response, Request, status, Header
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 import logging
 import os
 import sys
@@ -10,6 +11,7 @@ from rdflib import Graph
 import pyshacl
 import json
 import copy
+from urllib.parse import urlparse
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -45,7 +47,7 @@ def init():
     BAD_SCHEMAS = check_schemas(CONTENT_DIR)
 
 @app.get("/{schema_path:path}",  status_code=200)
-async def get_schema(schema_path:str, response:Response, accept_header=Header(None)):
+async def get_schema(schema_path:str, accept_header=Header(None)):
     """
     Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
@@ -57,53 +59,68 @@ async def get_schema(schema_path:str, response:Response, accept_header=Header(No
     try:
         result = resolve(accept_header, schema_path)
         if result is None:
-            response.status_code=status.HTTP_404_NOT_FOUND
             err_msg = "Schema '{}' not found".format(schema_path)
             log.error(err_msg)
-            return err_msg
+            return JSONResponse(content={'err_msg':err_msg}, status_code = status.HTTP_404_NOT_FOUND)
         return Response(content=result['content'], media_type=result['mime_type'])
     except BadSchemaException:
-        response.status_code=status.HTTP_406_NOT_ACCEPTABLE
         err_msg = "Schema '{}' is not syntactically correct or has other issues and cannot be served.".format(schema_path)
         log.error(err_msg)
-        return err_msg
+        return JSONResponse(content={'err_msg':err_msg}, status_code = status.HTTP_406_NOT_ACCEPTABLE)
 
 @app.post("/validate/{schema_path:path}", status_code=200)
-async def validate(schema_path:str, request:Request, response:Response):
+async def validate(schema_path:str, request:Request):
     """
     Validate the data provided in the body of the request against the schema at the specified path.
     Returns status 200 OK with a validation report in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport),
     if processing succeeded and resulted in a validation report - note that the validation report
     can still indicate that the provided data did not validate against the specified schema.
     If processing failed due to issues obtaining/parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
+    
+    If no schema_path is provided, then validate the data provided in the body of the request against one or more schemas inferred from the
+    data (by context or prefix) - this will validate the data against any schema referenced by the data.
+    Returns status 200 OK with a collection of validation reports in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport) keyed by schema against validation was run.
     """
     try:
         content_type = request.headers.get("content-type", "")
         supported = [MIME_TTL, MIME_JSONLD]
         if content_type not in supported:
-            response.status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
             err_msg = "Data must be supplied as content-type one of '{}', not '{}''".format(supported, content_type)
             log.error(err_msg)
-            return err_msg
+            return JSONResponse(content={'err_msg':err_msg}, status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
         data_format = None
         if content_type == MIME_TTL:
             data_format = 'ttl'
         if content_type == MIME_JSONLD:
             data_format = 'json-ld'
-        log.info("Validating data (formatted as {}) against schema {}.".format(data_format, request.url.path))
         data = await request.body()
         data_graph= Graph()
         data_graph.parse(data, format=data_format)
+        if schema_path is None or schema_path == '':
+            log.info("No schema path provided for validate request - inferring model to validate against.")
+            return await validate_infer_model(request, data_graph, data_format)
+        log.info("Validating data (formatted as {}) against schema {}.".format(data_format, schema_path))
         elems = schema_path.split('/')
+        url = urlparse(request.url._url)
         schema_graph = None
-        if '.' in elems[0] or ':' in elems[0] or 'localhost' in elems[0]:
+        alt_netloc = url.netloc
+        if 'localhost' in url.netloc:
+            alt_netloc = url.netloc.replace('localhost', '127.0.0.1')
+        if '127.0.0.1' in url.netloc:
+            alt_netloc = url.netloc.replace('127.0.0.1', 'localhost')
+        if ('.' in elems[0] or ':' in elems[0] or 'localhost' in elems[0]) and not url.netloc in schema_path and not alt_netloc in schema_path: # last 2 predicates avoid doing remote calls to this server
             # this is the host name of some other server, so let pyshacl resolve the URI
             schema_graph = 'http://' + schema_path
             log.info("Resolving remote schema at '{}'".format(schema_graph))
+            log.info("Request URL is '{}'".format(request.url._url))
         else:
             # this is a schema on this server, so get the schema graph directly
-            schema_response = await get_schema(schema_path, response, MIME_TTL)
-            if type(schema_response) ==str: # no proper schema returned, just an error message
+            if url.netloc in schema_path:
+                schema_path = schema_path[schema_path.find(url.netloc)+len(url.netloc):len(schema_path)]
+            elif alt_netloc in schema_path:
+                schema_path = schema_path[schema_path.find(alt_netloc)+len(alt_netloc):len(schema_path)]
+            schema_response = await get_schema(schema_path, MIME_TTL)
+            if schema_response.status_code == status.HTTP_404_NOT_FOUND:
                 raise Exception("Schema '{}' not found on this server - do you have the right schema name or is the feature to serve schemas switched off in this server?".format(schema_path))
             else:
                 schema = schema_response.body
@@ -115,10 +132,57 @@ async def validate(schema_path:str, request:Request, response:Response):
         report = json.loads(result[1])
         return JSONResponse(content=report, media_type=MIME_JSONLD)
     except Exception as x:
-        response.status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-        err_msg = "Could not validate provided data against schema {}. Error details: {}".format(request.url, x)
+        err_msg = "Could not validate provided data against schema {}. Error details: {}".format(schema_path, x)
         log.error(err_msg)
-        return err_msg
+        return JSONResponse(content={'err_msg':err_msg}, status_code = status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+async def validate_infer_model(request:Request, data_graph:Graph, data_format:str):
+    """
+    Validate the data provided in the body of the request against one or more schemas inferred from the
+    data (by context or prefix) - this will validate the data against any schema referenced by the data.
+    Returns status 200 OK with a collection of validation reports in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport) keyed by schema against validation was run,
+    if processing succeeded and resulted in one or more validation reports (in case there were references to multiple schemas) - note that the validation report
+    can still indicate that the provided data did not validate against the specified schema.
+    If processing failed due to issues obtaining/parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
+    """
+    # need to infer the schema graph(s) to validate against
+    # we do this by extracting the schema prefixes and validating
+    # the data against every prefix
+    schema_graphs = []
+    for (s, p, o) in data_graph:
+        iri = extract_base(str(s))
+        if iri is not None and iri not in schema_graphs:
+            schema_graphs.append(iri)
+        iri = extract_base(str(p))
+        if iri is not None and iri not in schema_graphs:
+            schema_graphs.append(iri)
+        iri = extract_base(str(o))
+        if iri is not None and iri not in schema_graphs:
+            schema_graphs.append(iri)
+    log.info("Validating data (formatted as {}) against {} schemas: {}".format(data_format, len(schema_graphs), schema_graphs))
+    results = {}
+    for s in schema_graphs:
+        validation_response = await validate(s, request)
+        results[s] = json.loads(validation_response.body)
+    log.info("Successfully created {} validation reports.".format(len(results)))
+    response = JSONResponse(content=jsonable_encoder(results), media_type=MIME_JSONLD, status_code=200)
+    return response
+
+def extract_base(iri:str):
+    """
+    If the IRI contains an anchor and a protocol, strip it away.
+    """
+    if iri.startswith('file://'): # some libraries mark non-iri id's as file-based iri's. we ignore these.
+        return None
+    pos = iri.find('#')
+    if pos > 0:
+        iri = iri[0:pos]
+    pos = iri.find('://')
+    if pos > 0:
+        iri = iri[pos+3:len(iri)]
+        return iri
+    #plain string literal, not an iri, ignore
+    return None
 
 def check_schemas(content_dir:str):
     """
@@ -312,7 +376,7 @@ def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:
         CONTENT_DIR += '/'
     global MIME_DEFAULT
     MIME_DEFAULT = default_mime
-    config = uvicorn.Config(app, host=host, port=port, log_level=log_level)
+    config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
     server = uvicorn.Server(config)
     return server
 
