@@ -12,6 +12,7 @@ import pyshacl
 import json
 import copy
 from urllib.parse import urlparse
+from typing import List
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -24,6 +25,8 @@ SUFFIX_TTL = '.ttl'
 SUPPORTED_SUFFIXES = [ SUFFIX_JSONLD, SUFFIX_TTL ]
 
 SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
+
+IGNORE_NAMESPACES = []
 
 CONTENT_DIR = './'
 BAD_SCHEMAS = []
@@ -42,6 +45,7 @@ class BadSchemaException(Exception):
 def init():
     log.info("Welcome to Shapiro.")
     log.info("Using '{}' as content dir.".format(CONTENT_DIR))
+    log.info("Ignoring the following namespace for validation inference: {}".format(IGNORE_NAMESPACES))
     log.info("Checking schema files.")
     global BAD_SCHEMAS
     BAD_SCHEMAS = check_schemas(CONTENT_DIR)
@@ -159,6 +163,10 @@ async def validate_infer_model(request:Request, data_graph:Graph, data_format:st
         iri = extract_base(str(o))
         if iri is not None and iri not in schema_graphs:
             schema_graphs.append(iri)
+    for i in IGNORE_NAMESPACES:
+        for s in schema_graphs:
+            if i in s:
+                schema_graphs.remove(s)
     log.info("Validating data (formatted as {}) against {} schemas: {}".format(data_format, len(schema_graphs), schema_graphs))
     results = {}
     for s in schema_graphs:
@@ -367,15 +375,18 @@ def get_args(args):
     parser.add_argument('--default_mime', help='The mime type to use for formatting served ontologies if the mimetype in the accept header is not available or usable. Defaults to "text/turtle"', type=str, default='text/turtle')
     parser.add_argument('--features', help="What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate' (for validating data against ontologies) or 'all'. Default is 'all'.",
         type=str, default='all', choices = ['all', 'serve', 'validate'])
+    parser.add_argument('--ignore_namespaces', help="A list of namespaces that wilkl be ignored when inferring schemas to validate data against. Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']", nargs='*', default = ['schema.org', 'w3.org', 'example.org'])
     return parser.parse_args(args)
 
-def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str):
+def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str]):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
     if not CONTENT_DIR.endswith('/'):
         CONTENT_DIR += '/'
     global MIME_DEFAULT
     MIME_DEFAULT = default_mime
+    global IGNORE_NAMESPACES
+    IGNORE_NAMESPACES = ignore_namespaces
     config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
     server = uvicorn.Server(config)
     return server
@@ -395,13 +406,13 @@ def activate_routes(features:str):
         if (features == 'validate' and r.name == 'get_schema') or (features == 'serve' and r.name == 'validate'):
             app.routes.remove(r)
 
-async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str):
+async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str, ignore_namespaces:List[str]):
     activate_routes(features)
-    server = await get_server(host, port, content_dir, log_level, default_mime).serve()
+    server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces).serve()
 
 def main(args):
     args = get_args(args)
-    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features))
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

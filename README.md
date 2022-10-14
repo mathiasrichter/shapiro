@@ -41,15 +41,15 @@ Assume you want to use one instance of Shapiro to just serve schemas, and anothe
 
 This would look for the schema names `org/example/myschemas/person`on `localhost:8000` (the instance that just serves schemas) and validate the schema obtained from there in `localhost:8000` against the data provided in the body of the request.
 
-You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined.
+You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined from the prefixes used in the data graph. The algorithm uses a configurable list of namespaces to ignore when infering the schemas - this list can be set using the command line parameter `--ignore_namespaces`and defaults to `['schema.org', 'w3.org', 'example.org']`. This means that prefixes pointing to these namespaces are assumed never to contain SHACL constraints to validate a given data graph against.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
-4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host`(default 127.0.0.1) `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`).
+4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host`(default 127.0.0.1) `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`), `--features` (default `all`), `--ignore_namespaces` (default `['schema.org', 'w3.org', 'example.org']`).
 5. Access the API at `http://localhost:8000`
 6. Access the API docs at `http://localhost:8000/docs`
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
 8. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.
 
-Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, content dir, log level, default mime type, features).
+Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, content dir, log level, default mime type, features, ignore namespaces).

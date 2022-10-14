@@ -12,7 +12,7 @@ client = TestClient(shapiro_server.app, 'http://127.0.0.1:8000') # need to use 1
 client1 = TestClient(shapiro_server.app, 'http://localhost:8000') # try resolving against localhost instead 127.0.0.1
 
 def test_get_server():
-    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle')
+    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle', ['schema.org', 'w3.org', 'example.org'])
     assert server is not None
 
 def test_bad_schema_checking_with_bad_schemas():
@@ -42,15 +42,17 @@ def test_commandline_parse_to_default():
     assert args.log_level == 'info'
     assert args.default_mime == 'text/turtle'
     assert args.features == 'all'
+    assert args.ignore_namespaces == ['schema.org', 'w3.org', 'example.org']
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar'])
     assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
     assert args.log_level == 'bar'
     assert args.default_mime == 'foobar'
     assert args.features == 'validate'
+    assert args.ignore_namespaces == ['foo', 'bar']
 
 def test_get_non_existing_schema():
     response = client.get("/this_is_a_non_existing_ontology")
