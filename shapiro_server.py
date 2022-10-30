@@ -68,9 +68,34 @@ class SchemaHousekeeping(Thread):
             self.check_for_schema_updates()
             self.stopped.wait(self.sleep_seconds)
 
+    def walk_schemas(self, content_dir:str, visit_schema):
+        """
+        Walk the hierarchy at content_dir and call the function specified under visit_schema.
+        visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under, without the actual schema name), 
+        full_name (the fully qualified path to the file containing the schema), the schema path (the fully qualified name of the schema) and suffix (the suffix
+        of the file containing the schema). 
+        visit_schema must return either None or a value. If it returns a value that value is collected and the collection of values is returned as the result of this
+        function (walk_schemas). 
+        """
+        result = []
+        for dir in os.walk(content_dir):
+            path = dir[0].replace('\\', '/').replace(os.path.sep, '/')
+            for filename in dir[2]:
+                suffix = filename[filename.rfind('.'):len(filename)]
+                if path.endswith('/'):
+                    full_name = path+filename
+                else:
+                    full_name = path + '/' + filename
+                if suffix in SUPPORTED_SUFFIXES:   
+                    schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]                                                                                                                      
+                    visit_result = visit_schema(path, full_name, schema_path, suffix)
+                    if visit_result is not None:
+                        result.append(visit_result)
+        return result
+
     def check_for_schema_updates(self):
         log.info("Housekeeping: Checking schema files for modifications.")
-        schemas_to_check = walk_schemas(CONTENT_DIR, self.check_schema)
+        schemas_to_check = self.walk_schemas(CONTENT_DIR, self.check_schema)
         log.info("Housekeeping detected {} modified schemas.".format(len(schemas_to_check)))
         self.last_execution_time = datetime.now()
         self.perform_housekeeping_on(schemas_to_check)
@@ -109,7 +134,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                 g = Graph()
                 g.parse(full_name)
                 found = False
-                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(get_suffix(full_name))]
+                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(full_name[full_name.rfind('.'):len(full_name)])]
                 for ( s, p, o) in g:
                     # want to be sure that the schema refers back to this server
                     # at least once in an RDF-triple
@@ -281,39 +306,6 @@ def extract_base(iri:str):
         return iri
     #plain string literal, not an iri, ignore
     return None
-
-def normalize(path:str):
-    path = path.replace('\\', '/')
-    path = path.replace(os.path.sep, '/')
-    return path
-
-def get_suffix(filename:str):
-    return filename[filename.rfind('.'):len(filename)]
-
-def walk_schemas(content_dir:str, visit_schema):
-    """
-    Walk the hierarchy at content_dir and call the function specified under visit_schema.
-    visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under, without the actual schema name), 
-    full_name (the fully qualified path to the file containing the schema), the schema path (the fully qualified name of the schema) and suffix (the suffix
-    of the file containing the schema). 
-    visit_schema must return either None or a value. If it returns a value that value is collected and the collection of values is returned as the result of this
-    function (walk_schemas). 
-    """
-    result = []
-    for dir in os.walk(content_dir):
-        path = normalize(dir[0])
-        for filename in dir[2]:
-            suffix = get_suffix(filename)
-            if path.endswith('/'):
-                full_name = path+filename
-            else:
-                full_name = path + '/' + filename
-            if suffix in SUPPORTED_SUFFIXES:   
-                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]                                                                                                                      
-                visit_result = visit_schema(path, full_name, schema_path, suffix)
-                if visit_result is not None:
-                    result.append(visit_result)
-    return result
 
 def resolve(accept_header:str, path:str):
     """
