@@ -2,31 +2,27 @@ from fastapi.testclient import TestClient
 from shapiro import shapiro_server
 import os
 import json
+import pytest
+from time import sleep
 
 shapiro_server.CONTENT_DIR = './test/ontologies'
 
 shapiro_server.init()
+sleep(3) # Shapiro's houskeeper threads need a few saeconds to do their bit, otherwise some tests will not succeed simply because some data is not ready yet
 
 client = TestClient(shapiro_server.app, 'http://127.0.0.1:8000') # need to use 127.0.0.1:8000 as base url to ensure tests succeed with test ontologies and test data
-
 client1 = TestClient(shapiro_server.app, 'http://localhost:8000') # try resolving against localhost instead 127.0.0.1
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup(request):
+    shapiro_server.shutdown() # Shapiro needs a chance to shutdown its housekeeper threads
 
 def test_get_server():
     server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle', ['schema.org', 'w3.org', 'example.org'])
     assert server is not None
 
-def test_bad_schema_checking_with_bad_schemas():
-    result = shapiro_server.check_schemas(shapiro_server.CONTENT_DIR)
-    assert len(result) == 4
-    assert './test/ontologies/bad/person1_without_origin_on_this_server.jsonld' in shapiro_server.BAD_SCHEMAS
-    assert './test/ontologies/bad/person2_without_origin_on_this_server.ttl' in shapiro_server.BAD_SCHEMAS
-
-def test_bad_schema_checking_without_bad_schemas():
-    result = shapiro_server.check_schemas('./test/ontologies/com')
-    assert len(result) == 0
-
 def test_get_existing_bad_schemas():
-    result = shapiro_server.check_schemas(shapiro_server.CONTENT_DIR)
+    result = shapiro_server.BAD_SCHEMAS
     assert len(result) == 4
     response = client.get("/bad/person1_with_syntax_error")
     assert response.status_code == 406

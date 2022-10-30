@@ -1,9 +1,11 @@
+from abc import ABC, abstractmethod
 import uvicorn
 import asyncio
 import argparse
 from fastapi import FastAPI, Response, Request, status, Header
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse
 import logging
 import os
 import sys
@@ -13,6 +15,8 @@ import json
 import copy
 from urllib.parse import urlparse
 from typing import List
+from threading import Thread, Event
+from datetime import datetime
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -31,6 +35,8 @@ IGNORE_NAMESPACES = []
 CONTENT_DIR = './'
 BAD_SCHEMAS = []
 ROUTES = None
+HOUSEKEEPERS = []
+
 
 log = logging.getLogger("uvicorn")
 
@@ -41,15 +47,99 @@ class BadSchemaException(Exception):
     def __init__(self):
         pass
 
+class SchemaHousekeeping(Thread):
+    """
+    Separate thread that does housekeeping on schemas. This is required
+    to keep the server in sync with the schemas when the server runs
+    for long times while schemas get added/removed in the file system.
+    """
+
+    def __init__(self, sleep_seconds):
+        Thread.__init__(self)
+        self.sleep_seconds = sleep_seconds
+        self.last_execution_time = None
+        self.stopped = Event()
+
+    def stop(self):
+        self.stopped.set()
+
+    def run(self):
+        while not self.stopped.is_set():
+            self.check_for_schema_updates()
+            self.stopped.wait(self.sleep_seconds)
+
+    def check_for_schema_updates(self):
+        log.info("Housekeeping: Checking schema files for modifications.")
+        schemas_to_check = walk_schemas(CONTENT_DIR, self.check_schema)
+        log.info("Housekeeping detected {} modified schemas.".format(len(schemas_to_check)))
+        self.last_execution_time = datetime.now()
+        self.perform_housekeeping_on(schemas_to_check)
+        
+    def check_schema(self, path:str, full_name:str, schema_path:str, suffix:str):
+        mod_time= datetime.fromtimestamp(os.stat(full_name).st_mtime)
+        if self.last_execution_time is None or self.last_execution_time < mod_time:
+            return full_name
+        
+    @abstractmethod
+    def perform_housekeeping_on(self, schemas:List[str]):
+        """
+        Abstract method for concrete subclasses to actually perform their houskeeping on.
+
+        Args:
+            schemas (List[str]): List of schema files to perform housekeeping on.
+        """
+        pass
+        
+class BadSchemaHousekeeping(SchemaHousekeeping):
+    """
+    Regularly check for bad schemas.
+    """
+
+    def __init__(self, sleep_seconds:float = 60.0 * 30.0):
+        super().__init__(sleep_seconds)
+
+    def perform_housekeeping_on(self, schemas:List[str]):
+        """
+        Check the specified schema for syntactical correctness and matching IRI in the schema for this server. This is to prevent issues at runtime.
+        Return the schema name if the schema contains an error, return None otherwise.
+        """
+        result = []
+        for full_name in schemas:
+            try:
+                g = Graph()
+                g.parse(full_name)
+                found = False
+                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(get_suffix(full_name))]
+                for ( s, p, o) in g:
+                    # want to be sure that the schema refers back to this server
+                    # at least once in an RDF-triple
+                    if found is False:
+                        found = str(s).find(schema_path) > -1 or str(p).find(schema_path) > -1 or str(o).find(schema_path) > -1
+                    if found is True:
+                        break
+                if found is False:
+                    raise Exception("Schema '{}' doesn't seem to have any origin on this server.")
+            except Exception as x:
+                log.warn("Housekeeping: Detected issues with schema '{}':{}".format(full_name, x))
+                result.append(full_name)
+        global BAD_SCHEMAS
+        BAD_SCHEMAS = result
+
 @app.on_event("startup")
 def init():
     log.info("Welcome to Shapiro.")
     log.info("Using '{}' as content dir.".format(CONTENT_DIR))
     log.info("Ignoring the following namespace for validation inference: {}".format(IGNORE_NAMESPACES))
-    log.info("Checking schema files.")
-    global BAD_SCHEMAS
-    BAD_SCHEMAS = check_schemas(CONTENT_DIR)
+    global HOUSEKEEPERS
+    HOUSEKEEPERS.append(BadSchemaHousekeeping())
+    for h in HOUSEKEEPERS:
+        h.start()
 
+@app.on_event("shutdown")
+def shutdown():
+    for h in HOUSEKEEPERS:
+        h.stop()
+        
 @app.get("/{schema_path:path}",  status_code=200)
 async def get_schema(schema_path:str, accept_header=Header(None)):
     """
@@ -118,12 +208,12 @@ async def validate(schema_path:str, request:Request):
             log.info("Resolving remote schema at '{}'".format(schema_graph))
             log.info("Request URL is '{}'".format(request.url._url))
         else:
-            # this is a schema on this server, so get the schema graph directly
+            mod_schema_path = schema_path
             if url.netloc in schema_path:
-                schema_path = schema_path[schema_path.find(url.netloc)+len(url.netloc):len(schema_path)]
+                mod_schema_path = schema_path[schema_path.find(url.netloc)+len(url.netloc):len(schema_path)]
             elif alt_netloc in schema_path:
-                schema_path = schema_path[schema_path.find(alt_netloc)+len(alt_netloc):len(schema_path)]
-            schema_response = await get_schema(schema_path, MIME_TTL)
+                mod_schema_path = schema_path[schema_path.find(alt_netloc)+len(alt_netloc):len(schema_path)]
+            schema_response = await get_schema(mod_schema_path, MIME_TTL)
             if schema_response.status_code == status.HTTP_404_NOT_FOUND:
                 raise Exception("Schema '{}' not found on this server - do you have the right schema name or is the feature to serve schemas switched off in this server?".format(schema_path))
             else:
@@ -192,46 +282,37 @@ def extract_base(iri:str):
     #plain string literal, not an iri, ignore
     return None
 
-def check_schemas(content_dir:str):
+def normalize(path:str):
+    path = path.replace('\\', '/')
+    path = path.replace(os.path.sep, '/')
+    return path
+
+def get_suffix(filename:str):
+    return filename[filename.rfind('.'):len(filename)]
+
+def walk_schemas(content_dir:str, visit_schema):
     """
-    Traverse the specified dir to verify each schema file with one of the supported suffixes
-    for syntactical correctness and matching IRI in the schema for this server. This is to prevent issues at runtime.
-    Returns an array of "bad files", if there are any.
+    Walk the hierarchy at content_dir and call the function specified under visit_schema.
+    visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under, without the actual schema name), 
+    full_name (the fully qualified path to the file containing the schema), the schema path (the fully qualified name of the schema) and suffix (the suffix
+    of the file containing the schema). 
+    visit_schema must return either None or a value. If it returns a value that value is collected and the collection of values is returned as the result of this
+    function (walk_schemas). 
     """
     result = []
     for dir in os.walk(content_dir):
-        path = dir[0]
-        path = path.replace('\\', '/')
-        path = path.replace(os.path.sep, '/')
+        path = normalize(dir[0])
         for filename in dir[2]:
-            suffix = filename[filename.rfind('.'):len(filename)]
+            suffix = get_suffix(filename)
             if path.endswith('/'):
                 full_name = path+filename
             else:
                 full_name = path + '/' + filename
-            if suffix in SUPPORTED_SUFFIXES:
-                try:
-                    g = Graph()
-                    g.parse(full_name)
-                    found = False
-                    schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]
-                    for ( s, p, o) in g:
-                        # want to be sure that the schema refers back to this server
-                        # at least once in an RDF-triple
-                        if found is False:
-                            found = str(s).find(schema_path) > -1 or str(p).find(schema_path) > -1 or str(o).find(schema_path) > -1
-                        if found is True:
-                            break
-                    if found is False:
-                        raise Exception("Schema '{}' doesn't seem to have any origin on this server.")
-                except Exception as x:
-                    log.error("Cannot process schema '{}':{}".format(full_name, x))
-                    result.append(full_name)
-    if len(result) > 0:
-        log.error("Found {} bad files: {}.".format(len(result), result))
-        log.error("Requests to serve these files will be reponded to with HTTP Status 406.")
-    else:
-        log.info("No bad schemas found.")
+            if suffix in SUPPORTED_SUFFIXES:   
+                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]                                                                                                                      
+                visit_result = visit_schema(path, full_name, schema_path, suffix)
+                if visit_result is not None:
+                    result.append(visit_result)
     return result
 
 def resolve(accept_header:str, path:str):
