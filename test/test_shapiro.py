@@ -4,6 +4,7 @@ import os
 import json
 import pytest
 from time import sleep
+import shutil
 
 shapiro_server.CONTENT_DIR = './test/ontologies'
 
@@ -49,6 +50,11 @@ def test_commandline_parse_to_specified_values():
     assert args.default_mime == 'foobar'
     assert args.features == 'validate'
     assert args.ignore_namespaces == ['foo', 'bar']
+
+def test_schema_fulltext_search():
+    response = client.get('/search/alive')
+    assert response.status_code == 200    
+    shutil.rmtree(shapiro_server.INDEX_DIR) # remove full-text-search indexes
 
 def test_get_non_existing_schema():
     response = client.get("/this_is_a_non_existing_ontology")

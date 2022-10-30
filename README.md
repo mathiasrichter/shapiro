@@ -43,6 +43,9 @@ This would look for the schema names `org/example/myschemas/person`on `localhost
 
 You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined from the prefixes used in the data graph. The algorithm uses a configurable list of namespaces to ignore when infering the schemas - this list can be set using the command line parameter `--ignore_namespaces`and defaults to `['schema.org', 'w3.org', 'example.org']`. This means that prefixes pointing to these namespaces are assumed never to contain SHACL constraints to validate a given data graph against.
 
+## Searching Shapiro
+Shapiro uses Whoosh Full-text-search to index all schemas it serves - after all, if you can't find it, you won't know it exists (smile)! So Shapiro indexes all schemas and makes them available through full text search using the the `search` API.
+
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`

@@ -17,6 +17,10 @@ from urllib.parse import urlparse
 from typing import List
 from threading import Thread, Event
 from datetime import datetime
+from whoosh.fields import Schema, TEXT, KEYWORD, ID, STORED
+from whoosh.analysis import StemmingAnalyzer
+import whoosh.index as whoosh_index
+from whoosh.qparser import MultifieldParser
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -33,10 +37,10 @@ SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
 IGNORE_NAMESPACES = []
 
 CONTENT_DIR = './'
+INDEX_DIR = './fts_index'
 BAD_SCHEMAS = []
 ROUTES = None
 HOUSEKEEPERS = []
-
 
 log = logging.getLogger("uvicorn")
 
@@ -150,6 +154,34 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
         global BAD_SCHEMAS
         BAD_SCHEMAS = result
 
+class SearchIndexHousekeeping(SchemaHousekeeping):
+    """
+    Regularly index new or changed schemas in the search index for providing full text search in schemas.
+    """
+
+    def __init__(self, sleep_seconds:float = 60.0 * 30.0):
+        super().__init__(sleep_seconds)
+        schema = Schema(full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer()))
+        if not os.path.exists(INDEX_DIR):
+            log.info("Housekeeping: Creating search index for schemas.")
+            os.mkdir(INDEX_DIR)
+            self.index = whoosh_index.create_in(INDEX_DIR, schema)
+        else:
+            log.info("Housekeeping: Using existing search index for schemas.")
+            self.index = whoosh_index.open_dir(INDEX_DIR)            
+
+    def perform_housekeeping_on(self, schemas:List[str]):
+        """
+        Index the schemas in the specified list.
+        """
+        writer = self.index.writer()
+        for s in schemas:
+            if s not in BAD_SCHEMAS:
+                with open(s, 'r') as f:
+                    log.info("Housekeeping: Indexing {}".format(s))
+                    writer.update_document(full_name=s, content=f.read())
+        writer.commit()        
+
 @app.on_event("startup")
 def init():
     log.info("Welcome to Shapiro.")
@@ -157,6 +189,7 @@ def init():
     log.info("Ignoring the following namespace for validation inference: {}".format(IGNORE_NAMESPACES))
     global HOUSEKEEPERS
     HOUSEKEEPERS.append(BadSchemaHousekeeping())
+    HOUSEKEEPERS.append(SearchIndexHousekeeping())
     for h in HOUSEKEEPERS:
         h.start()
 
@@ -164,6 +197,24 @@ def init():
 def shutdown():
     for h in HOUSEKEEPERS:
         h.stop()
+
+@app.get("/search/{query}",  status_code=200)
+async def search(query:str):
+    """
+    Use the Whoosh full text search index for schemas to find the text specified in the query in the schema files
+    served by this server.
+    """
+    log.info("Searching for '{}'".format(query))
+    index = whoosh_index.open_dir(INDEX_DIR)
+    qp = MultifieldParser(["content", "full_name"], schema=index.schema)
+    q = qp.parse(query)   
+    hits = []
+    with index.searcher() as searcher:
+        result = searcher.search(q)
+        log.info(result)
+        for r in result:
+            hits.append(r['full_name'])
+    return hits
         
 @app.get("/{schema_path:path}",  status_code=200)
 async def get_schema(schema_path:str, accept_header=Header(None)):

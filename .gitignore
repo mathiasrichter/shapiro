@@ -1,5 +1,6 @@
 main.py
 scratch.py
+fts_index/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
