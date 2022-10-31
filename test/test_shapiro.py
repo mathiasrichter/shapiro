@@ -24,6 +24,7 @@ def test_get_server():
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.BAD_SCHEMAS
+    print(result)
     assert len(result) == 4
     response = client.get("/bad/person1_with_syntax_error")
     assert response.status_code == 406

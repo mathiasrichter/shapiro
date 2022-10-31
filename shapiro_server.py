@@ -132,7 +132,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
         Check the specified schema for syntactical correctness and matching IRI in the schema for this server. This is to prevent issues at runtime.
         Return the schema name if the schema contains an error, return None otherwise.
         """
-        result = []
+        global BAD_SCHEMAS
         for full_name in schemas:
             try:
                 g = Graph()
@@ -148,11 +148,11 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                         break
                 if found is False:
                     raise Exception("Schema '{}' doesn't seem to have any origin on this server.")
+                if full_name in BAD_SCHEMAS:
+                    BAD_SCHEMAS.remove(full_name) # it was a bad schema, but changed and now is a good schema
             except Exception as x:
-                log.warn("Housekeeping: Detected issues with schema '{}':{}".format(full_name, x))
-                result.append(full_name)
-        global BAD_SCHEMAS
-        BAD_SCHEMAS = result
+                log.warning("Housekeeping: Detected issues with schema '{}':{}".format(full_name, x))
+                BAD_SCHEMAS.append(full_name)
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
     """
@@ -410,7 +410,7 @@ def convert(filename:str, content:str, mime_type:str):
                         'content': content,
                         'mime_type': mime_type
                     }
-    log.warn("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
+    log.warning("No conversion possible for content path '{}' and mime type '{}'".format(filename, mime_type))
     return None
 
 def map_filename(path:str):
