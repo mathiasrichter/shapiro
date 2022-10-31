@@ -202,7 +202,7 @@ def shutdown():
 async def search(query:str):
     """
     Use the Whoosh full text search index for schemas to find the text specified in the query in the schema files
-    served by this server.
+    served by this server. Returns hits in order of relevance.
     """
     log.info("Searching for '{}'".format(query))
     index = whoosh_index.open_dir(INDEX_DIR)
@@ -213,8 +213,9 @@ async def search(query:str):
         result = searcher.search(q)
         log.info(result)
         for r in result:
-            hits.append(r['full_name'])
-    return hits
+            hits.append(r['full_name'][len(CONTENT_DIR):r['full_name'].rfind('.')]) 
+               
+    return JSONResponse(content={'hits': hits})
         
 @app.get("/{schema_path:path}",  status_code=200)
 async def get_schema(schema_path:str, accept_header=Header(None)):
