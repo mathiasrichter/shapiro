@@ -54,7 +54,7 @@ def test_commandline_parse_to_specified_values():
 def test_schema_fulltext_search():
     response = client.get('/search/alive')
     assert response.status_code == 200    
-    shutil.rmtree(shapiro_server.INDEX_DIR) # remove full-text-search indexes
+    shutil.rmtree(shapiro_server.INDEX_DIR, ignore_errors=True) # remove full-text-search indexes
 
 def test_get_non_existing_schema():
     response = client.get("/this_is_a_non_existing_ontology")
