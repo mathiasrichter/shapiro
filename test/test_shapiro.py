@@ -8,6 +8,8 @@ import shutil
 
 shapiro_server.CONTENT_DIR = './test/ontologies'
 
+shutil.rmtree(shapiro_server.INDEX_DIR, ignore_errors=True) # remove previous full-text-search indexes
+
 shapiro_server.init()
 sleep(3) # Shapiro's houskeeper threads need a few saeconds to do their bit, otherwise some tests will not succeed simply because some data is not ready yet
 
