@@ -1,6 +1,5 @@
 window.addEventListener('DOMContentLoaded', event => {
 
-    // Navbar shrink function
     var navbarShrink = function () {
         const navbarCollapsible = document.body.querySelector('#mainNav');
         if (!navbarCollapsible) {
@@ -79,7 +78,7 @@ var codeIconSvg = function()
 
 var codeIconButton = function(link)
 {
-    return '<button class=\"btn btn-secondary\" data-bs-toggle=\"modal\" data-bs-target=\"#codeModal\" type=\"button\" onclick=\"viewCode(\'' + link.toString() + '\')\">' + codeIconSvg() + '</button>'
+    return '<button class=\"btn btn-secondary px-1 py-0 mx-0 my-0\" data-bs-toggle=\"modal\" data-bs-target=\"#codeModal\" type=\"button\" onclick=\"viewCode(\'' + link.toString() + '\')\">' + codeIconSvg() + '</button>'
 }
 
 var viewCode = function(link)
@@ -89,4 +88,24 @@ var viewCode = function(link)
         code = Prism.highlight(data, Prism.languages.turtle, 'turtle')
         $( "#codeModalContent" ).html( code );
       });
+}
+
+var search = function()
+{
+    $('#schemaList').DataTable().destroy();
+    setTable($('#searchText').val())
+    if ($('#searchText').val() != undefined && $('#searchText').val() != '')
+    {
+        $('#schemaTableHeader').text('Search Results for ' + $('#searchText').val())
+    } else 
+    {
+        $('#schemaTableHeader').text('Currently Serving');
+    }
+}
+
+var reset = function()
+{
+    resetTable();
+    $('#schemaTableHeader').text('Currently Serving');
+    $('#searchText').val('')
 }

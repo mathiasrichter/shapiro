@@ -17,34 +17,18 @@
     <body id="page-top">
         <nav class="navbar navbar-expand-lg bg-secondary text-white text-uppercase fixed-top" id="mainNav">
             <div class="container">
-                <img src="{{ url }}static/shapiro.png" alt="..." width="12%" height="auto">
+                <img src="{{ url }}static/shapiro.png" alt="..." width="7%" height="auto">
                 <div class="container">
-                    <h1>Shapiro</h1>
+                    <h3>Shapiro</h3>
                     Your friendly semantic companion
                 </div>
             </div>
         </nav>
-            <header class="masthead bg-primary text-white text-center mt-5 pb-4 align-center">
+            <header class="masthead bg-primary text-white text-center pb-4 align-center">
             <div class="row justify-content-md-center">
                     <input class="col-sm-5" type="text" id="searchText" placeholder="Search schema content">
-                    <button class="col-sm-1 btn btn-primary bg-secondary" onclick="
-                        $('#schemaList').DataTable().destroy();
-                        setTable($('#searchText').val())
-                        if ($('#searchText').val() != undefined && $('#searchText').val() != '')
-                        {
-                            $('#schemaTableHeader').text('Search Results for ' + $('#searchText').val())
-                        } else 
-                        {
-                            $('#schemaTableHeader').text('Currently Serving');
-                        }
-                        ">Search
-                    </button>
-                    <button class="col-sm-1 btn btn-primary bg-secondary" onclick="
-                        resetTable();
-                        $('#schemaTableHeader').text('Currently Serving');
-                        $('#searchText').val('')
-                        ">Reset
-                    </button>
+                    <button class="col-sm-1 btn btn-primary bg-secondary" onclick="search()">Search</button>
+                    <button class="col-sm-1 btn btn-primary bg-secondary" onclick="reset()">Reset</button>
                 </div>
         </header>
         <section class="page-section pt-4 pb-4">
@@ -100,6 +84,13 @@
         <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js" type="text/javascript"></script>
         <script type="application/javascript">
             $(document).ready(setTable());
+            $("#searchText").keyup(function(event) 
+            {
+                if (event.keyCode === 13) 
+                {
+                    search();
+                }
+            });
         </script>
     </body>
 </html>
