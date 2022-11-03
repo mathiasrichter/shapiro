@@ -8,3 +8,4 @@ pytest-cov
 uvicorn
 asyncio
 whoosh
+python-liquid

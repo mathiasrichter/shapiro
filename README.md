@@ -12,14 +12,13 @@ Drive all documentation (model diagrams, documents, graph visualizations, etc.) 
 Start out with providing a toolset from developers for developers for formulating such models and using them in source code, gradually extending towards tools, editors, UIs, transformations making this modelling approach accessible to non-technical actors like business analysts, domain data owners, etc.
 
 ## What is Shapiro
-Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serve up an organization's ontologies.
+Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies.
+
+## Serving Schemas
+Shapiro serves schemas from a directory hierarchy in the file system (specifiec by the `content_dir`parameter at startup). Shapiro will regularly check new o modified schemas for syntax errors and exclude such "bad schemas" from getting served. Schemas can be moved into Shapiro's content_dir while it is running. This decouples the lifecycle for schemas from the lifecycle of Shapiro - the basic idea being that the lifecycle of schemas is managed in some code repository where changes get pushed into Shapiro's content directory without Shapiro having to be restarted.
 
 ## Hierarchical Namespaces
 Shapiro allows you to keep schemas/ontologies in arbitrary namespace hierarchies - simply by reflecting namespaces as a directory hierarchy. This allows organizations to separate their schemas/ontologies across a hierarchical namespace and avoid any clashes. This also means you can have a more realxed governance around the various ontologies/schemas across a collaborating community. The assumption is that you manage your schemas/ontologies in a code repository (Github, etc.) and manage releases form there onto a Shapiro instance serving these schemas in a specific environment (dev/test/prod).
-
-## Current State
-Shapiro currently only implements the request to get a specific schema in JSON-LD or Turtle (HTML and JSON-SCHEMA to be implemented).
-Shapiro also offers validation of data (in JSONLD or TTL) against schemas/ontologies hosted on the local Shapiro server or on a remote server serving ontologies (e.g. schema.org).
 
 ## Validation with Shapiro
 Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API features (serving schemas and validating data against schemas).
@@ -44,13 +43,16 @@ This would look for the schema names `org/example/myschemas/person`on `localhost
 You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined from the prefixes used in the data graph. The algorithm uses a configurable list of namespaces to ignore when infering the schemas - this list can be set using the command line parameter `--ignore_namespaces`and defaults to `['schema.org', 'w3.org', 'example.org']`. This means that prefixes pointing to these namespaces are assumed never to contain SHACL constraints to validate a given data graph against.
 
 ## Searching Shapiro
-Shapiro uses Whoosh Full-text-search to index all schemas it serves - after all, if you can't find it, you won't know it exists (smile)! So Shapiro indexes all schemas and makes them available through full text search using the the `search` API.
+Shapiro uses Whoosh Full-text-search to index all schemas it serves. Shapiro regularly checks for modified or new schemas in its content directory and indexes them.
+
+## Shapiro UI
+Shapiro provides a minimal UI available at `/welcome/`. Any `GET`request to `/` without a schema name to retrieve will also redirect to the UI. The ui lists all schemas served by Shapiro at a given point in time and allows to full-text-search schema content.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
 4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host`(default 127.0.0.1) `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`), `--features` (default `all`), `--ignore_namespaces` (default `['schema.org', 'w3.org', 'example.org']`).
-5. Access the API at `http://localhost:8000`
+5. Access the UI at `http://localhost:8000/welcome`
 6. Access the API docs at `http://localhost:8000/docs`
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
 8. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.

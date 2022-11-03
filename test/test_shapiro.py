@@ -54,9 +54,33 @@ def test_commandline_parse_to_specified_values():
     assert args.ignore_namespaces == ['foo', 'bar']
 
 def test_schema_fulltext_search():
-    response = client.get('/search/alive')
+    response = client.get('/search/?query=alive')
+    assert response.status_code == 200    
+    response = client.get('/search/?query=')
     assert response.status_code == 200    
     shutil.rmtree(shapiro_server.INDEX_DIR, ignore_errors=True) # remove full-text-search indexes
+    
+def test_get_schema_list():
+    response = client.get('/schemas/')
+    assert response.status_code == 200    
+    
+def test_get_static_resources():
+    response = client.get('/static/favicon.ico')
+    assert response.status_code == 200    
+    response = client.get('/static/scripts.js')
+    assert response.status_code == 200    
+    response = client.get('/static/styles.css')
+    assert response.status_code == 200    
+    response = client.get('/static/shapiro.png')
+    assert response.status_code == 200
+    
+def test_get_welcome_page():
+    response = client.get('/welcome/')
+    assert response.status_code == 200    
+
+def test_redirect_to_welcome_page():
+    response = client.get('/')
+    assert response.status_code == 200    
 
 def test_get_non_existing_schema():
     response = client.get("/this_is_a_non_existing_ontology")

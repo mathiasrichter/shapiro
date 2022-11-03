@@ -5,7 +5,7 @@ import argparse
 from fastapi import FastAPI, Response, Request, status, Header
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
 import os
 import sys
@@ -21,6 +21,10 @@ from whoosh.fields import Schema, TEXT, KEYWORD, ID, STORED
 from whoosh.analysis import StemmingAnalyzer
 import whoosh.index as whoosh_index
 from whoosh.qparser import MultifieldParser
+from liquid import Environment
+from liquid import Mode
+from liquid import StrictUndefined
+from liquid import FileSystemLoader
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -45,6 +49,12 @@ HOUSEKEEPERS = []
 log = logging.getLogger("uvicorn")
 
 app = FastAPI()
+
+env = Environment(
+    tolerance=Mode.STRICT,
+    undefined=StrictUndefined,
+    loader=FileSystemLoader("templates/"),
+)
 
 class BadSchemaException(Exception):
 
@@ -72,34 +82,9 @@ class SchemaHousekeeping(Thread):
             self.check_for_schema_updates()
             self.stopped.wait(self.sleep_seconds)
 
-    def walk_schemas(self, content_dir:str, visit_schema):
-        """
-        Walk the hierarchy at content_dir and call the function specified under visit_schema.
-        visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under, without the actual schema name), 
-        full_name (the fully qualified path to the file containing the schema), the schema path (the fully qualified name of the schema) and suffix (the suffix
-        of the file containing the schema). 
-        visit_schema must return either None or a value. If it returns a value that value is collected and the collection of values is returned as the result of this
-        function (walk_schemas). 
-        """
-        result = []
-        for dir in os.walk(content_dir):
-            path = dir[0].replace('\\', '/').replace(os.path.sep, '/')
-            for filename in dir[2]:
-                suffix = filename[filename.rfind('.'):len(filename)]
-                if path.endswith('/'):
-                    full_name = path+filename
-                else:
-                    full_name = path + '/' + filename
-                if suffix in SUPPORTED_SUFFIXES:   
-                    schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(suffix)]                                                                                                                      
-                    visit_result = visit_schema(path, full_name, schema_path, suffix)
-                    if visit_result is not None:
-                        result.append(visit_result)
-        return result
-
     def check_for_schema_updates(self):
         log.info("Housekeeping: Checking schema files for modifications.")
-        schemas_to_check = self.walk_schemas(CONTENT_DIR, self.check_schema)
+        schemas_to_check = walk_schemas(CONTENT_DIR, self.check_schema)
         log.info("Housekeeping detected {} modified schemas.".format(len(schemas_to_check)))
         self.last_execution_time = datetime.now()
         self.perform_housekeeping_on(schemas_to_check)
@@ -138,7 +123,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                 g = Graph()
                 g.parse(full_name)
                 found = False
-                schema_path = full_name[len(CONTENT_DIR):len(full_name)-len(full_name[full_name.rfind('.'):len(full_name)])]
+                schema_path = get_schema_path(full_name)
                 for ( s, p, o) in g:
                     # want to be sure that the schema refers back to this server
                     # at least once in an RDF-triple
@@ -198,12 +183,52 @@ def shutdown():
     for h in HOUSEKEEPERS:
         h.stop()
 
-@app.get("/search/{query}",  status_code=200)
-async def search(query:str):
+@app.get("/static/{name}",  status_code=200)
+async def get_static_resource(name:str):
+    """
+    Serve static artefacts for HTML views.
+    """
+    name = 'static/' + name
+    print(name)
+    mime = "text/html"
+    if name.endswith(".png"):
+        mime = "image/png"
+    if name.endswith(".js"):
+        mime = "text/javascript"
+    if name.endswith(".css"):
+        mime = "text/css"
+    if name.endswith(".ico"):
+        mime = "image/x-icon"
+    with open(name, 'rb') as f:
+        static_content = f.read()
+        return Response(content=static_content, media_type=mime)
+    
+@app.get("/welcome/",  status_code=200)
+async def welcome(request:Request):
+    """
+    Render a welcome page.
+    """
+    welcome = env.get_template('main.html').render(url=request.base_url)
+    return HTMLResponse(content=welcome)
+
+@app.get("/schemas/",  status_code=200)
+async def get_schema_list(request:Request):
+    """
+    Return a list of the schemas hosted in this repository as JSON-data.
+    """
+    log.info("Retrieving list of schemas")
+    result = walk_schemas(CONTENT_DIR, lambda path, full_name, schema_path, suffix: {'schema_path':schema_path,  'full_name':full_name, 'link':str(request.base_url)+schema_path } if full_name not in BAD_SCHEMAS else None ) 
+    return JSONResponse(content={'schemas': result})
+
+@app.get("/search/",  status_code=200)
+async def search(query:str = None, request:Request = None):
     """
     Use the Whoosh full text search index for schemas to find the text specified in the query in the schema files
     served by this server. Returns hits in order of relevance.
     """
+    if query is None or query == '':
+        log.info("No search query specified, returning full schema list.")
+        return await get_schema_list(request)
     log.info("Searching for '{}'".format(query))
     index = whoosh_index.open_dir(INDEX_DIR)
     qp = MultifieldParser(["content", "full_name"], schema=index.schema)
@@ -213,12 +238,15 @@ async def search(query:str):
         result = searcher.search(q)
         log.info(result)
         for r in result:
-            hits.append(r['full_name'][len(CONTENT_DIR):r['full_name'].rfind('.')]) 
-               
-    return JSONResponse(content={'hits': hits})
+            schema_path = get_schema_path(r['full_name'])
+            hit = {'schema_path':schema_path, 'full_name':r['full_name'], 'link':str(request.base_url) + schema_path}
+            if hit not in hits:
+                if r['full_name'] not in BAD_SCHEMAS:
+                    hits.append(hit)   
+    return JSONResponse(content={'schemas': hits})
         
 @app.get("/{schema_path:path}",  status_code=200)
-async def get_schema(schema_path:str, accept_header=Header(None)):
+async def get_schema(schema_path:str = None, accept_header=Header(None)):
     """
     Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
@@ -226,6 +254,9 @@ async def get_schema(schema_path:str, accept_header=Header(None)):
     """
     if accept_header is None:
         accept_header=''
+    if schema_path is None or schema_path == '':
+        log.info("No schema path specified - redirecting to welcome page.")
+        return RedirectResponse("/welcome/")
     log.info("Retrieving schema '{}' with accept-headers '{}'".format(schema_path, accept_header))
     try:
         result = resolve(accept_header, schema_path)
@@ -487,6 +518,43 @@ def negotiate(accept_header:str):
         log.warning("No supported mime type found in accept header - resorting to default ({})".format(MIME_DEFAULT))
         preferred = MIME_DEFAULT
     return preferred
+
+def get_suffix(full_name:str):
+    """
+    Extract the file suffix from the full name of a schema file.
+    """
+    return full_name[full_name.rfind('.'):len(full_name)]
+
+def get_schema_path(full_name:str):
+    """
+    Extract the schema path from the full_name of a schema file.
+    """
+    return full_name[len(CONTENT_DIR):len(full_name)-len(get_suffix(full_name))]                                                                                                                      
+
+def walk_schemas(content_dir:str, visit_schema):
+    """
+    Walk the hierarchy at content_dir and call the function specified under visit_schema.
+    visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under, without the actual schema name), 
+    full_name (the fully qualified path to the file containing the schema), the schema path (the fully qualified name of the schema) and suffix (the suffix
+    of the file containing the schema). 
+    visit_schema must return either None or a value. If it returns a value that value is collected and the collection of values is returned as the result of this
+    function (walk_schemas). 
+    """
+    result = []
+    for dir in os.walk(content_dir):
+        path = dir[0].replace('\\', '/').replace(os.path.sep, '/')
+        for filename in dir[2]:
+            suffix = get_suffix(filename)
+            if path.endswith('/'):
+                full_name = path+filename
+            else:
+                full_name = path + '/' + filename
+            if suffix in SUPPORTED_SUFFIXES:   
+                schema_path = get_schema_path(full_name)
+                visit_result = visit_schema(path, full_name, schema_path, suffix)
+                if visit_result is not None:
+                    result.append(visit_result)
+    return result
 
 def get_args(args):
     """
