@@ -29,13 +29,12 @@
                     <input class="col-sm-5" type="text" id="searchText" placeholder="Search schema content">
                     <button class="col-sm-1 btn btn-primary bg-secondary" onclick="
                         $('#schemaList').DataTable().destroy();
+                        setTable($('#searchText').val())
                         if ($('#searchText').val() != undefined && $('#searchText').val() != '')
                         {
-                            setTable()
                             $('#schemaTableHeader').text('Search Results for ' + $('#searchText').val())
                         } else 
                         {
-                            setTable();
                             $('#schemaTableHeader').text('Currently Serving');
                         }
                         ">Search

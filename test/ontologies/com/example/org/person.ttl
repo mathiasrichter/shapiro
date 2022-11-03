@@ -5,7 +5,7 @@
 
 :Person a rdfs:Class ;
     rdfs:label "Person" ;
-    rdfs:comment "A person (alive, dead, undead, or fictional)." ;
+    rdfs:comment "A person (alive, dead, undead, or fictional or real)." ;
     rdfs:subClassOf schema:Thing
     .
 

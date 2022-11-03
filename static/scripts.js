@@ -36,13 +36,20 @@ var resetTable = function() {
     setTable()    
 }
 
-var setTable = function()
+var setTable = function(search_text)
 {
+    if (search_text == undefined)
+    {
+        url = '/schemas/'
+    } else
+    {
+        url = '/search/?query='+search_text
+    }
     $('#schemaList').DataTable(
         {
             'ajax': 
             {
-                'url': '/schemas/', 
+                'url': url, 
                 'dataSrc': 'schemas'
             },
             'columns': [
