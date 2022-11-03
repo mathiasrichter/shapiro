@@ -153,7 +153,10 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
             self.index = whoosh_index.create_in(INDEX_DIR, schema)
         else:
             log.info("Housekeeping: Using existing search index for schemas.")
-            self.index = whoosh_index.open_dir(INDEX_DIR)            
+            try:
+                self.index = whoosh_index.open_dir(INDEX_DIR)
+            except:
+                log.error("Houskeeping: Index directory does not contain index files.")
 
     def perform_housekeeping_on(self, schemas:List[str]):
         """
