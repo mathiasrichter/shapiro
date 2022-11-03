@@ -233,20 +233,24 @@ async def search(query:str = None, request:Request = None):
         log.info("No search query specified, returning full schema list.")
         return await get_schema_list(request)
     log.info("Searching for '{}'".format(query))
-    index = whoosh_index.open_dir(INDEX_DIR)
-    qp = MultifieldParser(["content", "full_name"], schema=index.schema)
-    q = qp.parse(query)   
-    hits = []
-    with index.searcher() as searcher:
-        result = searcher.search(q)
-        log.info(result)
-        for r in result:
-            schema_path = get_schema_path(r['full_name'])
-            hit = {'schema_path':schema_path, 'full_name':r['full_name'], 'link':str(request.base_url) + schema_path}
-            if hit not in hits:
-                if r['full_name'] not in BAD_SCHEMAS:
-                    hits.append(hit)   
-    return JSONResponse(content={'schemas': hits})
+    try:
+        index = whoosh_index.open_dir(INDEX_DIR)
+        qp = MultifieldParser(["content", "full_name"], schema=index.schema)
+        q = qp.parse(query)   
+        hits = []
+        with index.searcher() as searcher:
+            result = searcher.search(q)
+            log.info(result)
+            for r in result:
+                schema_path = get_schema_path(r['full_name'])
+                hit = {'schema_path':schema_path, 'full_name':r['full_name'], 'link':str(request.base_url) + schema_path}
+                if hit not in hits:
+                    if r['full_name'] not in BAD_SCHEMAS:
+                        hits.append(hit)   
+        return JSONResponse(content={'schemas': hits})
+    except Exception as x:
+        log.error("Could not perform search: {}".format(x))
+        return Response(content="Could not perform search.", status_code=404)
         
 @app.get("/{schema_path:path}",  status_code=200)
 async def get_schema(schema_path:str = None, accept_header=Header(None)):
