@@ -54,7 +54,11 @@ def test_commandline_parse_to_specified_values():
     assert args.ignore_namespaces == ['foo', 'bar']
 
 def test_schema_fulltext_search():
-    response = client.get('/search/?query=alive')
+    response = client.get('/search/?query=real')
+    hits = response.json()
+    assert hits['schemas'] is not None
+    assert len(hits['schemas']) == 1
+    assert hits['schemas'][0]['schema_path'] == 'com/example/org/person'
     assert response.status_code == 200    
     response = client.get('/search/?query=')
     assert response.status_code == 200    
