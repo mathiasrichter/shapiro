@@ -147,6 +147,7 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
     def __init__(self, sleep_seconds:float = 60.0 * 30.0):
         super().__init__(sleep_seconds)
         schema = Schema(full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer()))
+        log.info("Housekeeping: Using index directory '{}'".format(INDEX_DIR))
         if not os.path.exists(INDEX_DIR):
             log.info("Housekeeping: Creating search index for schemas.")
             os.mkdir(INDEX_DIR)
@@ -576,9 +577,10 @@ def get_args(args):
     parser.add_argument('--features', help="What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate' (for validating data against ontologies) or 'all'. Default is 'all'.",
         type=str, default='all', choices = ['all', 'serve', 'validate'])
     parser.add_argument('--ignore_namespaces', help="A list of namespaces that wilkl be ignored when inferring schemas to validate data against. Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']", nargs='*', default = ['schema.org', 'w3.org', 'example.org'])
+    parser.add_argument('--index_dir', help="The directory where Shapiro stores the full-text-search indices. Default is ./fts_index", default = './fts_index/')
     return parser.parse_args(args)
 
-def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str]):
+def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str], index_dir:str):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
     if not CONTENT_DIR.endswith('/'):
@@ -587,6 +589,8 @@ def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:
     MIME_DEFAULT = default_mime
     global IGNORE_NAMESPACES
     IGNORE_NAMESPACES = ignore_namespaces
+    global INDEX_DIR
+    INDEX_DIR = index_dir
     config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
     server = uvicorn.Server(config)
     return server
@@ -606,13 +610,13 @@ def activate_routes(features:str):
         if (features == 'validate' and r.name == 'get_schema') or (features == 'serve' and r.name == 'validate'):
             app.routes.remove(r)
 
-async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str, ignore_namespaces:List[str]):
+async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str, ignore_namespaces:List[str], index_dir:str):
     activate_routes(features)
-    server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces).serve()
+    server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces, index_dir).serve()
 
 def main(args):
     args = get_args(args)
-    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces))
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -21,7 +21,7 @@ def cleanup(request):
     shapiro_server.shutdown() # Shapiro needs a chance to shutdown its housekeeper threads
 
 def test_get_server():
-    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle', ['schema.org', 'w3.org', 'example.org'])
+    server = shapiro_server.get_server('127.0.0.1', 8000, shapiro_server.CONTENT_DIR, 'info', 'text/turtle', ['schema.org', 'w3.org', 'example.org'], './fts_index')
     assert server is not None
 
 def test_get_existing_bad_schemas():
@@ -42,9 +42,10 @@ def test_commandline_parse_to_default():
     assert args.default_mime == 'text/turtle'
     assert args.features == 'all'
     assert args.ignore_namespaces == ['schema.org', 'w3.org', 'example.org']
+    assert args.index_dir == './fts_index/'
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar', '--index_dir', '/tmp'])
     assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
@@ -52,6 +53,7 @@ def test_commandline_parse_to_specified_values():
     assert args.default_mime == 'foobar'
     assert args.features == 'validate'
     assert args.ignore_namespaces == ['foo', 'bar']
+    assert args.index_dir == '/tmp'
 
 def test_schema_fulltext_search():
     response = client.get('/search/?query=real')
