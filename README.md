@@ -1,4 +1,4 @@
-[![Shapiro](static/shapiro.png)]
+<img src="static/shapiro.png" alt="Shapiro" width="10%"/>
 
 # Shapiro
 
