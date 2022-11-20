@@ -1,6 +1,4 @@
-
-
-# <img src="static/shapiro.png" alt="Shapiro" width="10%"/>Shapiro
+# <img src="static/shapiro.png" alt="Shapiro" width="8%"/>   Shapiro
 
 ## Model as Code
 Model data as knowledge graphs using Turtle or JSON-LD and use these models in API definitions/implementations and all other code consuming data based on these models.
