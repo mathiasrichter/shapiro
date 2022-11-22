@@ -578,9 +578,12 @@ def get_args(args):
         type=str, default='all', choices = ['all', 'serve', 'validate'])
     parser.add_argument('--ignore_namespaces', help="A list of namespaces that wilkl be ignored when inferring schemas to validate data against. Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']", nargs='*', default = ['schema.org', 'w3.org', 'example.org'])
     parser.add_argument('--index_dir', help="The directory where Shapiro stores the full-text-search indices. Default is ./fts_index", default = './fts_index/')
+    parser.add_argument('--ssl_keyfile', help='SSL key file')
+    parser.add_argument('--ssl_certfile', help='SSL certificates file')
+    parser.add_argument('--ssl_ca_certs', help='CA certificates file')
     return parser.parse_args(args)
 
-def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str], index_dir:str):
+def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str], index_dir:str, ssl_keyfile=None, ssl_certfile=None, ssl_ca_certs=None):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
     if not CONTENT_DIR.endswith('/'):
@@ -591,7 +594,10 @@ def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:
     IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
-    config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
+    if ssl_keyfile:
+        config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level, ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile, ssl_ca_certs=ssl_ca_certs)
+    else:
+        config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
     server = uvicorn.Server(config)
     return server
 
@@ -610,13 +616,20 @@ def activate_routes(features:str):
         if (features == 'validate' and r.name == 'get_schema') or (features == 'serve' and r.name == 'validate'):
             app.routes.remove(r)
 
-async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str, ignore_namespaces:List[str], index_dir:str):
+async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str,
+                       ignore_namespaces:List[str], index_dir:str, ssl_keyfile=None, ssl_certfile=None,
+                       ssl_ca_certs=None):
     activate_routes(features)
-    server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces, index_dir).serve()
+    server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces, index_dir,
+                              ssl_keyfile, ssl_certfile, ssl_ca_certs).serve()
 
 def main(args):
     args = get_args(args)
-    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
+    if args.ssl_keyfile:
+        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir, args.ssl_keyfile, args.ssl_certfile, args.ssl_ca_certs))
+    else:
+        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
