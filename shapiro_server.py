@@ -8,7 +8,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
 import os
-import sys
 from rdflib import Graph
 import pyshacl
 import json
@@ -564,7 +563,7 @@ def walk_schemas(content_dir:str, visit_schema):
                     result.append(visit_result)
     return result
 
-def get_args(args):
+def get_args(argv=None):
     """
     Defines and parses the commandline parameters for running the server.
     """
@@ -578,7 +577,7 @@ def get_args(args):
         type=str, default='all', choices = ['all', 'serve', 'validate'])
     parser.add_argument('--ignore_namespaces', help="A list of namespaces that wilkl be ignored when inferring schemas to validate data against. Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']", nargs='*', default = ['schema.org', 'w3.org', 'example.org'])
     parser.add_argument('--index_dir', help="The directory where Shapiro stores the full-text-search indices. Default is ./fts_index", default = './fts_index/')
-    return parser.parse_args(args)
+    return parser.parse_args(argv)
 
 def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str], index_dir:str):
     global CONTENT_DIR
@@ -614,9 +613,10 @@ async def start_server(host:str, port:int, content_dir:str, log_level:str, defau
     activate_routes(features)
     server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces, index_dir).serve()
 
-def main(args):
-    args = get_args(args)
+def main(argv=None):
+    args = get_args(argv)
     asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
+

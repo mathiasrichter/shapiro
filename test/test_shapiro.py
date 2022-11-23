@@ -34,7 +34,7 @@ def test_get_existing_bad_schemas():
     assert response.status_code == 406
 
 def test_commandline_parse_to_default():
-    args = shapiro_server.get_args([])
+    args = shapiro_server.get_args()
     assert args.host == '127.0.0.1'
     assert args.port == 8000
     assert args.content_dir == './'
@@ -45,7 +45,9 @@ def test_commandline_parse_to_default():
     assert args.index_dir == './fts_index/'
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar', '--index_dir', '/tmp'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo',
+                                    '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate',
+                                    '--ignore_namespaces', 'foo', 'bar', '--index_dir', '/tmp'])
     assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
