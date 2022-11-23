@@ -594,10 +594,7 @@ def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:
     IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
-    if ssl_keyfile:
-        config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level, ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile, ssl_ca_certs=ssl_ca_certs)
-    else:
-        config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level)
+    config = uvicorn.Config(app, host=host, port=port, workers=5, log_level=log_level, ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile, ssl_ca_certs=ssl_ca_certs)
     server = uvicorn.Server(config)
     return server
 
