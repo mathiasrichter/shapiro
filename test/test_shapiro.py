@@ -1,7 +1,5 @@
 from fastapi.testclient import TestClient
 from shapiro import shapiro_server
-import os
-import json
 import pytest
 from time import sleep
 import shutil
