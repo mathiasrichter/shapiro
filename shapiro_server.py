@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import uvicorn
 import asyncio
 import argparse
@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from typing import List
 from threading import Thread, Event
 from datetime import datetime
-from whoosh.fields import Schema, TEXT, KEYWORD, ID, STORED
+from whoosh.fields import Schema, TEXT, ID
 from whoosh.analysis import StemmingAnalyzer
 import whoosh.index as whoosh_index
 from whoosh.qparser import MultifieldParser
