@@ -2,6 +2,9 @@ main.py
 scratch.*
 fts_index/
 
+# folder from intellij
+.idea
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
