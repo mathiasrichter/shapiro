@@ -51,7 +51,7 @@ Shapiro provides a minimal UI available at `/welcome/`. Any `GET`request to `/` 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
-4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host` (default `127.0.0.1`), `--port` (default `8000`), `--content_dir` (default `./`), `--log_level` (default `info`), `--features` (default `all`), `--ignore_namespaces` (default `['schema.org', 'w3.org', 'example.org']`, `--index_dir` (default `./fts_index/`).
+4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host` (default `127.0.0.1`), `--port` (default `8000`), `--content_dir` (default `./`), `--log_level` (default `info`), `--features` (default `all`), `--ignore_namespaces` (default `['schema.org', 'w3.org', 'example.org']`, and `--index_dir` (default `./fts_index/`).
 5. Access the UI at `http://localhost:8000/welcome/`
 6. Access the API docs at `http://localhost:8000/docs`
 7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
