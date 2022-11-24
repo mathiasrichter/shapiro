@@ -43,9 +43,12 @@ def test_commandline_parse_to_default():
     assert args.features == 'all'
     assert args.ignore_namespaces == ['schema.org', 'w3.org', 'example.org']
     assert args.index_dir == './fts_index/'
+    assert args.ssl_keyfile is None
+    assert args.ssl_certfile is None
+    assert args.ssl_ca_certs is None
 
 def test_commandline_parse_to_specified_values():
-    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar', '--index_dir', '/tmp'])
+    args = shapiro_server.get_args(['--host', '0.0.0.0', '--port', '1234', '--content_dir', './foo', '--log_level', 'bar', '--default_mime', 'foobar', '--features', 'validate', '--ignore_namespaces', 'foo', 'bar', '--index_dir', '/tmp',  '--ssl_keyfile', './certs/key.key',  '--ssl_certfile', './certs/cert.crt',  '--ssl_ca_certs', './certs/ca_cert.crt'])
     assert args.host == '0.0.0.0'
     assert args.port == 1234
     assert args.content_dir == './foo'
@@ -54,6 +57,9 @@ def test_commandline_parse_to_specified_values():
     assert args.features == 'validate'
     assert args.ignore_namespaces == ['foo', 'bar']
     assert args.index_dir == '/tmp'
+    assert args.ssl_keyfile == './certs/key.key'
+    assert args.ssl_certfile == './certs/cert.crt'
+    assert args.ssl_ca_certs == './certs/ca_cert.crt'
 
 def test_schema_fulltext_search():
     response = client.get('/search/?query=real')
