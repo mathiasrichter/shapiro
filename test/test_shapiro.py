@@ -32,7 +32,7 @@ def test_get_existing_bad_schemas():
     assert response.status_code == 406
 
 def test_commandline_parse_to_default():
-    args = shapiro_server.get_args([])
+    args = shapiro_server.get_args()
     assert args.host == '127.0.0.1'
     assert args.port == 8000
     assert args.content_dir == './'

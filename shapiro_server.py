@@ -8,7 +8,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
 import os
-import sys
 from rdflib import Graph
 import pyshacl
 import json
@@ -564,7 +563,7 @@ def walk_schemas(content_dir:str, visit_schema):
                     result.append(visit_result)
     return result
 
-def get_args(args):
+def get_args(argv=None):
     """
     Defines and parses the commandline parameters for running the server.
     """
@@ -581,7 +580,8 @@ def get_args(args):
     parser.add_argument('--ssl_keyfile', help='SSL key file')
     parser.add_argument('--ssl_certfile', help='SSL certificates file')
     parser.add_argument('--ssl_ca_certs', help='CA certificates file')
-    return parser.parse_args(args)
+    return parser.parse_args(argv)
+
 
 def get_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, ignore_namespaces:List[str], index_dir:str, ssl_keyfile=None, ssl_certfile=None, ssl_ca_certs=None):
     global CONTENT_DIR
@@ -613,6 +613,7 @@ def activate_routes(features:str):
         if (features == 'validate' and r.name == 'get_schema') or (features == 'serve' and r.name == 'validate'):
             app.routes.remove(r)
 
+
 async def start_server(host:str, port:int, content_dir:str, log_level:str, default_mime:str, features:str,
                        ignore_namespaces:List[str], index_dir:str, ssl_keyfile=None, ssl_certfile=None,
                        ssl_ca_certs=None):
@@ -620,13 +621,11 @@ async def start_server(host:str, port:int, content_dir:str, log_level:str, defau
     server = await get_server(host, port, content_dir, log_level, default_mime, ignore_namespaces, index_dir,
                               ssl_keyfile, ssl_certfile, ssl_ca_certs).serve()
 
-def main(args):
-    args = get_args(args)
-    if args.ssl_keyfile:
-        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir, args.ssl_keyfile, args.ssl_certfile, args.ssl_ca_certs))
-    else:
-        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
+
+def main(argv=None):
+    args = get_args(argv)
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir, args.ssl_keyfile, args.ssl_certfile, args.ssl_ca_certs))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
