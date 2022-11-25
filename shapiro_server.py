@@ -624,10 +624,7 @@ async def start_server(host:str, port:int, content_dir:str, log_level:str, defau
 
 def main(argv=None):
     args = get_args(argv)
-    if args.ssl_keyfile:
-        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir, args.ssl_keyfile, args.ssl_certfile, args.ssl_ca_certs))
-    else:
-        asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir))
+    asyncio.run(start_server(args.host, args.port, args.content_dir, args.log_level, args.default_mime, args.features, args.ignore_namespaces, args.index_dir, args.ssl_keyfile, args.ssl_certfile, args.ssl_ca_certs))
 
 
 if __name__ == "__main__":
