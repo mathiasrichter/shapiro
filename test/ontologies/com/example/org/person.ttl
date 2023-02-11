@@ -1,13 +1,55 @@
-@prefix : <http://127.0.0.1:8000/com/example/org/person#> .
+@prefix : <http://127.0.0.1:8000/com/example/org/person/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:<http://www.w3.org/2004/02/skos/core#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix adms: <http://www.w3.org/ns/adms#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://127.0.0.1:8000/com/example/org/person> a owl:Ontology ;
+  adms:status <http://purl.org/adms/status/UnderDevelopment> ;
+  dct:format <http://publications.europa.eu/resource/authority/file-type/RDF_TURTLE> ;
+  dct:creator "Mathias.richter@gmail.com" ;
+  dct:created "2022-09-22"^^xsd:date ;
+  dct:publisher <http://example.org/mathiasrichter> ;
+  rdfs:label "Person Model" ;
+  rdfs:comment "An ontology used to test Shapiro." ;
+  dct:title "Person Model" ; 
+  dct:description "An ontology used to test Shapiro." ;
+  dct:modified "2023-01-31"^^xsd:date ;
+.
 
 :Person a rdfs:Class ;
     rdfs:label "Person" ;
-    rdfs:comment "A person (alive, dead, undead, or fictional or real)." ;
+    rdfs:comment """A *person* (alive, dead, undead, or fictional or real).
+
+  - alive: the person lives at the current time
+  - dead: the person has lived at some point in the past
+  - undead: the person has died and arisen from the dead. Implies the person is fictional unless the Zombie apocalypse really happens.
+  - fictional: the person exists/has existed only in fictional works (novels, movies, etc.), never in real live.
+  - real: the person exists/has existed in reality.
+                  """ ;
     rdfs:subClassOf schema:Thing
-    .
+.
+
+:PersonName a rdfs:Property ;
+  rdfs:label "PersonName";
+  dct:title "PersonName";
+  rdfs:comment "A person's name.";
+  dct:description "A person's name.";
+  skos:definition "A person's name.";
+  rdfs:range rdfs:string, rdfs:number;
+  rdfs:domain :Person;
+.
+
+:PersonNameShape a sh:Property ;
+  sh:path :PersonName ;
+  sh:minLength 5;
+  sh:maxLength 10;
+  sh:maxCount 5;
+.
 
 :PersonShape a sh:NodeShape ;
   sh:targetClass :Person ;

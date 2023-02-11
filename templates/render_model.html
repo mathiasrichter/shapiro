@@ -1,0 +1,78 @@
+<section class="page-section pt-4 pb-4">
+    <div class="container">
+        <h2 class="mb-3">{{model.label}}</h2>
+        {% if model_details_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <tr>
+                <td class="fw-bolder">IRI</td>
+                <td>{{model.iri}}</td>
+            </tr>
+            {% for k in model_details_keys %}
+            <tr>
+                <td class="fw-bolder"><a href="{{k}}">{{model_details_names[k]}}</a></td>
+                <td>{{ model_details[k] | url}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        There does not seem to be any detailed information about this model.
+        {% endif %}
+        <h3 class="mt-5">Classes</h3>
+        {% if class_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Class</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for c in classes %}
+            <tr>
+                <td><a href="{{c.iri}}">{{c.label}}</a></td>
+                <td>{{c.comment}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This model does not seem to define any RDFS classes.
+        {% endif %}
+        <h3 class="mt-5">NodeShapes</h3>
+        {% if shape_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">NodeShape</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for s in shapes %}
+            <tr>
+                <td><a href="{{s.iri}}">{{s.label}}</a></td>
+                <td>{{s.comment}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This model does not seem to define any SHACL node shapes.
+        {% endif %}
+        <h3 class="mt-5">Properties</h3>
+        {% if property_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Property</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for p in properties %}
+            <tr>
+                <td><a href="{{p.iri}}">{{p.label}}</a></td>
+                <td>{{p.comment}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This model does not seem to define any RDFS properties.
+        {% endif %}
+    </div>
+</section>

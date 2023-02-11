@@ -1,0 +1,54 @@
+<section class="page-section pt-4 pb-4">
+    <div class="container">
+        <h2 class="mb-3">{{property.label}}</h2>
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <tr>
+                <td class="fw-bolder">IRI</td>
+                <td><a href="{{property.iri}}">{{property.iri}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td><a href="{{type}}">{{type | prune}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td>{{property.label}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td>{{property.comment}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#domain">Used in node shapes</a></td>
+                <td>
+                    {% for s in shapes %}
+                        <a href="{{s.iri}}">{{s.iri | prune}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder">Defined in</td>
+                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+            </tr>
+        </table>
+        <h3 class="mt-5">SHACL Constraints</h3>
+        {% if constraint_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Constraint</th>
+                    <th class="th-sm">Value</th>
+                </tr>
+            </thead>
+            {% for c in constraints %}
+            <tr>
+                <td><a href="{{c.constraint_iri}}">{{c.constraint_iri | prune}}</a></td>
+                <td>{{c.value|url}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            This property does not seem to have any associated SHACL properties.
+        {% endif %}
+    </div>
+</section>

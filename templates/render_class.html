@@ -1,0 +1,60 @@
+<section class="page-section pt-4 pb-4">
+    <div class="container">
+        <h2 class="mb-3">{{the_class.label}}</h2>
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <tr>
+                <td class="fw-bolder">IRI</td>
+                <td><a href="{{the_class.iri}}">{{the_class.iri}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td><a href="{{type}}">{{type | prune}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td>{{the_class.label}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td>{{the_class.comment}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#subClassOf">Subclass of</a></td>
+                <td>
+                    {% for s in superclasses %}
+                        <a href="{{s.iri}}">{{s.iri | prune}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder">Defined in</td>
+                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+            </tr>
+        </table>
+        <h3 class="mt-5">Properties</h3>
+        {% if prop_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Property</th>
+                    <th class="th-sm">Description</th>
+                    <th class="th-sm">Type</th>
+                </tr>
+            </thead>
+            {% for p in properties %}
+            <tr>
+                <td><a href="{{p.iri}}">{{p.label | prune}}</a></td>
+                <td>{{p.comment}}</td>
+                <td>
+                    {% for t in prop_types[p.iri] %}
+                    {{ t | url }}<br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            This property does not seem to have any associated properties.
+        {% endif %}
+   </div>
+</section>

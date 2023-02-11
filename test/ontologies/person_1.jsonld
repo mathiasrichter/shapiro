@@ -1,12 +1,12 @@
 [
   {
-    "@id": "http://example.org/person/lastname",
+    "@id": "http://127.0.0.1:8000/person_1/lastname",
     "@type": [
       "http://www.w3.org/2000/01/rdf-schema#Property"
     ],
     "http://schema.org/domainIncludes": [
       {
-        "@id": "http://example.org/person/Person"
+        "@id": "http://127.0.0.1:8000/person_1/Person"
       }
     ],
     "http://schema.org/rangeIncludes": [
@@ -21,13 +21,13 @@
     ]
   },
   {
-    "@id": "http://example.org/person/firstname",
+    "@id": "http://127.0.0.1:8000/person_1/firstname",
     "@type": [
       "http://www.w3.org/2000/01/rdf-schema#Property"
     ],
     "http://schema.org/domainIncludes": [
       {
-        "@id": "http://example.org/person/Person"
+        "@id": "http://127.0.0.1:8000/person_1/Person"
       }
     ],
     "http://www.w3.org/2000/01/rdf-schema#Comment": [
@@ -62,12 +62,12 @@
     ],
     "http://www.w3.org/ns/shacl#path": [
       {
-        "@id": "http://example.org/person#firstname"
+        "@id": "http://127.0.0.1:8000/person_1/firstname"
       }
     ]
   },
   {
-    "@id": "http://example.org/person#Person",
+    "@id": "http://127.0.0.1:8000/person_1/Person",
     "@type": [
       "http://www.w3.org/2000/01/rdf-schema#Class"
     ],
@@ -78,13 +78,13 @@
     ]
   },
   {
-    "@id": "http://example.org/person#birthdate",
+    "@id": "http://127.0.0.1:8000/person_1/birthdate",
     "@type": [
       "http://www.w3.org/2000/01/rdf-schema#Property"
     ],
     "http://schema.org/domainIncludes": [
       {
-        "@id": "http://example.org/person/Person"
+        "@id": "http://127.0.0.1:8000/person_1/Person"
       }
     ],
     "http://schema.org/rangeIncludes": [
@@ -99,13 +99,13 @@
     ]
   },
   {
-    "@id": "http://example.org/person/PersonShape",
+    "@id": "http://127.0.0.1:8000/person_1/PersonShape",
     "@type": [
       "http://www.w3.org/ns/shacl#NodeShape"
     ],
     "http://www.w3.org/ns/shacl#targetClass": [
       {
-        "@id": "http://example.org/person/Person"
+        "@id": "http://127.0.0.1:8000/person_1/Person"
       }
     ]
   }

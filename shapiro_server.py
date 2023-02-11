@@ -24,6 +24,8 @@ from liquid import Environment
 from liquid import Mode
 from liquid import StrictUndefined
 from liquid import FileSystemLoader
+from shapiro_render import HtmlRenderer
+from shapiro_util import BadSchemaException, NotFoundException
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -35,7 +37,7 @@ SUFFIX_JSONLD = ".jsonld"
 SUFFIX_TTL = ".ttl"
 SUPPORTED_SUFFIXES = [SUFFIX_JSONLD, SUFFIX_TTL]
 
-SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL]
+SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL, MIME_HTML]
 
 IGNORE_NAMESPACES = []
 
@@ -44,6 +46,10 @@ INDEX_DIR = "./fts_index"
 BAD_SCHEMAS = []
 ROUTES = None
 HOUSEKEEPERS = []
+
+BASE_URL = None
+
+HTML_RENDERER = HtmlRenderer()
 
 log = logging.getLogger("uvicorn")
 
@@ -54,12 +60,6 @@ env = Environment(
     undefined=StrictUndefined,
     loader=FileSystemLoader("templates/"),
 )
-
-
-class BadSchemaException(Exception):
-    def __init__(self):
-        pass
-
 
 class SchemaHousekeeping(Thread):
     """
@@ -124,8 +124,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
         global BAD_SCHEMAS
         for full_name in schemas:
             try:
-                g = Graph()
-                g.parse(full_name)
+                g = Graph().parse(full_name)
                 found = False
                 schema_path = get_schema_path(full_name)
                 for (s, p, o) in g:
@@ -219,7 +218,6 @@ async def get_static_resource(name: str):
     Serve static artefacts for HTML views.
     """
     name = "static/" + name
-    print(name)
     mime = "text/html"
     if name.endswith(".png"):
         mime = "image/png"
@@ -239,7 +237,10 @@ async def welcome(request: Request):
     """
     Render a welcome page.
     """
-    welcome_page = env.get_template("main.html").render(url=request.base_url)
+    global BASE_URL
+    if BASE_URL is None:
+        BASE_URL = str(request.base_url)
+    welcome_page = env.get_template("main.html").render(url=BASE_URL)
     return HTMLResponse(content=welcome_page)
 
 
@@ -249,12 +250,15 @@ async def get_schema_list(request: Request):
     Return a list of the schemas hosted in this repository as JSON-data.
     """
     log.info("Retrieving list of schemas")
+    global BASE_URL
+    if BASE_URL is None:
+        BASE_URL = str(request.base_url)
     result = walk_schemas(
         CONTENT_DIR,
         lambda path, full_name, schema_path, suffix: {
             "schema_path": schema_path,
             "full_name": full_name,
-            "link": str(request.base_url) + schema_path,
+            "link": str(BASE_URL) + schema_path,
         }
         if full_name not in BAD_SCHEMAS
         else None,
@@ -268,6 +272,9 @@ async def search(query: str = None, request: Request = None):
     Use the Whoosh full text search index for schemas to find the text specified in the query in the schema files
     served by this server. Returns hits in order of relevance.
     """
+    global BASE_URL
+    if BASE_URL is None and request:
+        BASE_URL = str(request.base_url)
     if query is None or query == "":
         log.info("No search query specified, returning full schema list.")
         return await get_schema_list(request)
@@ -293,18 +300,25 @@ async def search(query: str = None, request: Request = None):
         return JSONResponse(content={"schemas": hits})
     except Exception as x:
         log.error("Could not perform search: {}".format(x))
-        return Response(content="Could not perform search.", status_code=404)
+        return Response(content="Could not perform search.", status_code=500)
 
-
+# usage of ":path"as per https://www.starlette.io/routing/#path-parameters
 @app.get("/{schema_path:path}", status_code=200)
-async def get_schema(schema_path: str = None, accept_header=Header(None)):
+def get_schema(schema_path: str = None, accept_mime:str = None, request:Request = None):
     """
     Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
     Currently supported mime types are 'application/ld+json', 'text/turtle'.
     """
-    if accept_header is None:
-        accept_header = ""
+    global BASE_URL
+    if BASE_URL is None:
+        BASE_URL = str(request.base_url)
+    accept_header = accept_mime
+    if (accept_header == "" or accept_header is None):
+        for k in request.headers.keys():
+            if k.lower() == "accept":
+                accept_header = request.headers.get("accept", "")
+                break
     if schema_path is None or schema_path == "":
         log.info("No schema path specified - redirecting to welcome page.")
         return RedirectResponse("/welcome/")
@@ -318,9 +332,7 @@ async def get_schema(schema_path: str = None, accept_header=Header(None)):
         if result is None:
             err_msg = "Schema '{}' not found".format(schema_path)
             log.error(err_msg)
-            return JSONResponse(
-                content={"err_msg": err_msg}, status_code=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFoundException("Could not find schema {}".format(schema_path))
         return Response(content=result["content"], media_type=result["mime_type"])
     except BadSchemaException:
         err_msg = "Schema '{}' is not syntactically correct or has other issues and cannot be served.".format(
@@ -330,7 +342,14 @@ async def get_schema(schema_path: str = None, accept_header=Header(None)):
         return JSONResponse(
             content={"err_msg": err_msg}, status_code=status.HTTP_406_NOT_ACCEPTABLE
         )
-
+    except NotFoundException as x:
+            if MIME_HTML.lower() in accept_header.lower():
+                return Response(env.get_template("error.html").render(url=BASE_URL, msg=x.content), media_type="text/html", status_code = status.HTTP_404_NOT_FOUND)
+            else:
+                return JSONResponse(
+                    content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
+                )
+        
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
@@ -405,7 +424,7 @@ async def validate(schema_path: str, request: Request):
                 mod_schema_path = schema_path[
                     schema_path.find(alt_netloc) + len(alt_netloc) : len(schema_path)
                 ]
-            schema_response = await get_schema(mod_schema_path, MIME_TTL)
+            schema_response = get_schema(mod_schema_path, MIME_TTL)
             if schema_response.status_code == status.HTTP_404_NOT_FOUND:
                 raise Exception(
                     """Schema '{}' not found on this server - do you have the right schema name or is the feature to
@@ -434,7 +453,7 @@ async def validate(schema_path: str, request: Request):
         log.error(err_msg)
         return JSONResponse(
             content={"err_msg": err_msg},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
 
 
@@ -513,16 +532,22 @@ def resolve(accept_header: str, path: str):
     f = open(filename, "r")
     content = f.read()
     f.close()
-    return convert(filename, content, mime_type)
+    result = convert(path, filename, content, mime_type)
+    return result
 
 
-def convert(filename: str, content: str, mime_type: str):
+def convert(path:str, filename: str, content: str, mime_type: str):
     """
-    Convert the content (from the specified filename) to the format
+    Convert the content (from the specified iri-path and filename) to the format
     according to the specified mime type.
     """
     if filename in BAD_SCHEMAS:
         raise BadSchemaException()
+    if mime_type == MIME_HTML:
+        if filename[0:filename.rfind('.')].endswith(path):
+            return {"content": HTML_RENDERER.render_model(BASE_URL, BASE_URL + path) , "mime_type": mime_type}
+        else:
+            return {"content": HTML_RENDERER.render_model_element(BASE_URL, BASE_URL + path) , "mime_type": mime_type}            
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
             log.info(
@@ -570,9 +595,9 @@ def map_filename(path: str):
         if os.path.isfile(current):
             candidates.append(current)
     # it is not, so assume that last element of the path is an element in the file
-    full_path = full_path[0 : full_path.rfind("/")]
+    pruned_path = full_path[0 : full_path.rfind("/")]
     for s in SUPPORTED_SUFFIXES:
-        current = full_path + s
+        current = pruned_path + s
         if os.path.isfile(current):
             candidates.append(current)
     if len(candidates) == 1:
@@ -689,7 +714,7 @@ def walk_schemas(content_dir: str, visit_schema):
     return result
 
 
-def get_args(argv=None):
+def get_args(argv=[]):
     """
     Defines and parses the commandline parameters for running the server.
     """

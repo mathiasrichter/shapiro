@@ -1,4 +1,4 @@
-@prefix : <http://example.org/com/example/org/person#> .
+@prefix : <http://example.org/com/example/org/person/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .

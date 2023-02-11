@@ -1,0 +1,92 @@
+<section class="page-section pt-4 pb-4">
+    <div class="container">
+        <h2 class="mb-3">{{property.label}}</h2>
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <tr>
+                <td class="fw-bolder">IRI</td>
+                <td><a href="{{property.iri}}">{{property.iri}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td><a href="{{type}}">{{type | prune}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td>{{property.label}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td>{{property.comment}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#range">Type</a></td>
+                <td>
+                    {% for t in prop_type %}
+                    <a href="{{t}}">{{t | prune}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#domain">Used in Classes</a></td>
+                <td>
+                    {% for c in classes %}
+                    <a href="{{c}}">{{c | prune}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#subPropertyOf">Subproperty of</a></td>
+                <td>
+                    {% for s in superprop %}
+                    <a href="{{s}}">{{s | prune}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder">Defined in</td>
+                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+            </tr>
+        </table>
+        <h3 class="mt-5">SHACL Properties</h3>
+        {% if shacl_prop_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">SHACL Property</th>
+                    <th class="th-sm">Description</th>
+                    <th class="th-sm">Nodeshapes</th>
+                    <th class="th-sm">Constraints</th>
+                </tr>
+            </thead>
+            {% for sp in shacl_props %}
+            <tr>
+                {% if sp.label == "unnamed" %}
+                    <td>{{sp.label}}</td>
+                {% else %}
+                    <td><a href="{{sp.iri}}">{{sp.label | prune}}</a></td>
+                {% endif %}
+                <td>{{sp.comment}}</td>
+                <td>
+                    {% for n in shacl_prop_shapes[sp.iri] %}
+                        <a href="{{n}}">{{n | prune}}</a><br/>
+                    {% endfor %}
+                </td>
+                <td>
+                    <table>
+                        {% for c in shacl_prop_constraints[sp.iri] %}
+                        <tr>
+                            <td><a href="{{c.constraint_iri}}">{{c.constraint_iri | prune}}</a></td>
+                            <td/><td/>
+                            <td>{{c.value | url}}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            This property does not seem to have any associated SHACL properties.
+        {% endif %}
+    </div>
+</section>

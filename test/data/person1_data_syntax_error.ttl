@@ -1,5 +1,5 @@
 @prefix : <http://example.org/ns#> .
-@prefix p: <http://127.0.0.1:8000/com/example/org/person#> .
+@prefix p: <http://127.0.0.1:8000/com/example/org/person/> .
 @prefix schema: <http://schema.org/> .
 
 :bob a p:Person

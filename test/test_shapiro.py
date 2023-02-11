@@ -1,8 +1,16 @@
 from fastapi.testclient import TestClient
-from shapiro import shapiro_server
 import pytest
 from time import sleep
 import shutil
+import shapiro_server
+from shapiro_util import BadSchemaException, NotFoundException
+from shapiro_render import prune_iri, Subscriptable
+import subprocess
+
+###########################################################################################
+# for running with an html coverage report :
+# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov-report=html
+###########################################################################################
 
 shapiro_server.CONTENT_DIR = "./test/ontologies"
 
@@ -10,23 +18,21 @@ shutil.rmtree(
     shapiro_server.INDEX_DIR, ignore_errors=True
 )  # remove previous full-text-search indexes
 
+# need a back instance of Shapiro to resolve IRI requests from rdflib during HTML rendering
+shapiro_back_instance = subprocess.Popen(["python3", "shapiro_server.py", "--content_dir", "./test/ontologies"])
+
 shapiro_server.init()
 sleep(
     3
-)  # Shapiro's houskeeper threads need a few saeconds to do their bit, otherwise some tests will not succeed simply because some data is not ready yet
+)  # Shapiro's houskeeper threads need a few seconds to do their bit, otherwise some tests will not succeed simply because some data is not ready yet
 
 client = TestClient(
     shapiro_server.app, "http://127.0.0.1:8000"
 )  # need to use 127.0.0.1:8000 as base url to ensure tests succeed with test ontologies and test data
+
 client1 = TestClient(
     shapiro_server.app, "http://localhost:8000"
 )  # try resolving against localhost instead 127.0.0.1
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup(request):
-    shapiro_server.shutdown()  # Shapiro needs a chance to shutdown its housekeeper threads
-
 
 def test_get_server():
     server = shapiro_server.get_server(
@@ -36,7 +42,7 @@ def test_get_server():
         "info",
         "text/turtle",
         ["schema.org", "w3.org", "example.org"],
-        "./fts_index",
+        "./fts_index"
     )
     assert server is not None
 
@@ -48,7 +54,7 @@ def test_get_existing_bad_schemas():
     assert response.status_code == 406
     mime = "application/ld+json"
     response = client.get(
-        "/bad/person2_with_syntax_error", headers={"accept-header": mime}
+        "/bad/person2_with_syntax_error", headers={"accept": mime}
     )
     assert response.status_code == 406
 
@@ -138,25 +144,91 @@ def test_get_static_resources():
     response = client.get("/static/shapiro.png")
     assert response.status_code == 200
 
+def test_shapiro_util():
+    with pytest.raises(BadSchemaException):
+        raise BadSchemaException()
+    with pytest.raises(NotFoundException):
+        raise NotFoundException("Test Error")
 
 def test_get_welcome_page():
     response = client.get("/welcome/")
     assert response.status_code == 200
-
+    
 
 def test_redirect_to_welcome_page():
     response = client.get("/")
     assert response.status_code == 200
 
+def test_render_model():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
 
-def test_get_non_existing_schema():
-    response = client.get("/this_is_a_non_existing_ontology")
+def test_render_class():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/Person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+def test_render_shape():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/PersonShape", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
+def test_render_property():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/PersonName", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
+def test_render_shacl_property():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/PersonNameShape", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
+def test_get_non_existing_schema_jsonld():
+    mime_in = "application/ld+json"
+    mime_out = "application/json"
+    response = client.get("/this_is_a_non_existing_ontology", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_out)
     assert response.status_code == 404
 
 
+def test_get_non_existing_schema_ttl():
+    mime_in = "text/turtle"
+    mime_out = "application/json"
+    response = client.get("/this_is_a_non_existing_ontology", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_out)
+    assert response.status_code == 404
+
+
+def test_get_non_existing_schema_html():
+    mime_in = "text/html"
+    response = client.get("/this_is_a_non_existing_ontology", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 404
+
+def test_get_non_existing_schema_element_html():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/Foo", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 404
+
+def test_404_in_schema_element_html():
+    mime_in = "text/html"
+    response = client.get("/person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 404
+
 def test_get_existing_jsonld_schema_as_jsonld():
     mime = "application/ld+json"
-    response = client.get("/person", headers={"accept-header": mime})
+    response = client.get("/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
@@ -164,21 +236,21 @@ def test_get_existing_jsonld_schema_as_jsonld():
 def test_get_existing_jsonld_schema_as_jsonld_with_multiple_weighted_accept_headers():
     mime_in = "application/ld+json;q=0.9,text/turtle;q=0.8"
     mime_out = "application/ld+json"
-    response = client.get("/person", headers={"accept-header": mime_in})
+    response = client.get("/person", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_out)
     assert response.status_code == 200
 
 
 def test_get_existing_jsonld_schema_as_ttl():
     mime = "text/turtle"
-    response = client.get("/person", headers={"accept-header": mime})
+    response = client.get("/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
 
 def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld():
     mime = "application/ld+json"
-    response = client.get("/com/example/org/person", headers={"accept-header": mime})
+    response = client.get("/com/example/org/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
@@ -186,7 +258,7 @@ def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld():
 def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld_ignoring_element_reference_with_os_path_sep():
     mime = "application/ld+json"
     response = client.get(
-        "/com/example/org/person/firstname", headers={"accept-header": mime}
+        "/com/example/org/person/firstname", headers={"accept": mime}
     )
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
@@ -195,7 +267,7 @@ def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld_ignoring_e
 def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld_ignoring_element_reference_with_anchor():
     mime = "application/ld+json"
     response = client.get(
-        "/com/example/org/person#firstname", headers={"accept-header": mime}
+        "/com/example/org/person#firstname", headers={"accept": mime}
     )
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
@@ -203,21 +275,21 @@ def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld_ignoring_e
 
 def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_ttl():
     mime = "text/turtle"
-    response = client.get("/com/example/org/person", headers={"accept-header": mime})
+    response = client.get("/com/example/org/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
 
 def test_get_existing_jsonld_schema_as_default_without_accept_header():
     mime = ""
-    response = client.get("/person", headers={"accept-header": mime})
+    response = client.get("/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(shapiro_server.MIME_DEFAULT)
     assert response.status_code == 200
 
 
 def test_get_existing_ttl_schema_as_default_without_accept_header():
     mime = ""
-    response = client.get("/com/example/org/person", headers={"accept-header": mime})
+    response = client.get("/com/example/org/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(shapiro_server.MIME_DEFAULT)
     assert response.status_code == 200
 
@@ -229,14 +301,14 @@ def test_get_existing_schema_with_duplicates():
 
 def test_get_existing_schema_with_uncovered_mime_type():
     mime = "text/text"
-    response = client.get("/com/example/org/person", headers={"accept-header": mime})
+    response = client.get("/com/example/org/person", headers={"accept": mime})
     assert response.headers["content-type"].startswith(shapiro_server.MIME_DEFAULT)
     assert response.status_code == 200
 
 
 def test_convert_with_unkown_mime_yields_none():
     result = shapiro_server.convert(
-        "irrelevantPath", "irrelevantContent", "fantasymimetype"
+        "irrelevant path", "irrelevantFilename", "irrelevantContent", "fantasymimetype"
     )
     assert result is None
 
@@ -252,7 +324,6 @@ def test_validate_with_compliant_jsonld_data():
         assert response.status_code == 200
         report = response.json()
         assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
-
 
 def test_validate_with_uncompliant_jsonld_data():
     with open("./test/data/person2_data_invalid.jsonld") as data_file:
@@ -436,11 +507,6 @@ def test_features_switching_only_validate():
         assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
 
 
-###########################################################################################################################
-
-###########################################################################################################################
-
-
 def test_validate_with_inference_with_compliant_jsonld_data():
     with open("./test/data/person2_data_valid.jsonld") as data_file:
         response = client.post(
@@ -451,8 +517,9 @@ def test_validate_with_inference_with_compliant_jsonld_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == True
@@ -469,8 +536,9 @@ def test_validate_with_inference_with_uncompliant_jsonld_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == False
@@ -487,8 +555,9 @@ def test_validate_with_inference_with_compliant_jsonld_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == True
@@ -505,8 +574,9 @@ def test_validate_with_inference_with_uncompliant_jsonld_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == False
@@ -523,8 +593,9 @@ def test_validate_with_inference_with_compliant_ttl_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == True
@@ -541,8 +612,9 @@ def test_validate_with_inference_with_uncompliant_ttl_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == False
@@ -559,8 +631,9 @@ def test_validate_with_inference_with_compliant_ttl_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == True
@@ -577,8 +650,9 @@ def test_validate_with_inference_with_uncompliant_ttl_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
+        key = iter(report.keys()).__next__()
         assert (
-            report["127.0.0.1:8000/com/example/org/person"][0][
+            report[key][0][
                 "http://www.w3.org/ns/shacl#conforms"
             ][0]["@value"]
             == False
@@ -623,3 +697,17 @@ def test_validate_with_localhost_with_compliant_ttl_list_data():
         assert response.status_code == 200
         report = response.json()
         assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
+
+def test_prune():
+    p = prune_iri("/a/b/c/")
+    assert p == "C"
+    
+def test_subscriptable():
+    s = Subscriptable()
+    with pytest.raises(Exception):
+        s['foo']
+
+# ensure this executes last 
+def test_teardown():
+    shapiro_server.shutdown()
+    shapiro_back_instance.terminate()

@@ -1,7 +1,10 @@
 # <img src="static/shapiro.png" alt="Shapiro" width="8%" style="margin-bottom:-15px;margin-right:15px"/>  Shapiro
 
-## Model as Code
-Model data as knowledge graphs using Turtle or JSON-LD and use these models in API definitions/implementations and all other code consuming data based on these models.
+## What is Shapiro
+Shapiro is a simple ontology/vocabulary server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies/vocabularies.
+
+## Motivation - Model as Code
+Why would one need something like Shapiro? The basic idea is to model data as knowledge graphs using Turtle or JSON-LD and use these models in API definitions/implementations and all other code consuming data based on these models.
 
 Make the use of these machine-readable model definitions pervasive throughout all phases of the software lifecycle (design, implement, test, release) and the lifecycle of the data originating from software built using these models.
 
@@ -11,8 +14,7 @@ Drive all documentation (model diagrams, documents, graph visualizations, etc.) 
 
 Start out with providing a toolset from developers for developers for formulating such models and using them in source code, gradually extending towards tools, editors, UIs, transformations making this modelling approach accessible to non-technical actors like business analysts, domain data owners, etc.
 
-## What is Shapiro
-Shapiro is a simple ontology/schema/model server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies.
+In order to do so, you need a way to serve the models - this is where Shapiro comes in.
 
 ## Serving Schemas
 Shapiro serves schemas from a directory hierarchy in the file system (specifiec by the `content_dir`parameter at startup). Shapiro will regularly check new or modified schemas for syntax errors and exclude such "bad schemas" from getting served. Schemas can be moved into Shapiro's content_dir while it is running. This decouples the lifecycle for schemas from the lifecycle of Shapiro - the basic idea being that the lifecycle of schemas is managed in some code repository where changes get pushed into Shapiro's content directory without Shapiro having to be restarted.

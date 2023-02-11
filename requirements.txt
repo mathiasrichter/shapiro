@@ -10,3 +10,4 @@ asyncio
 whoosh
 python-liquid
 httpx
+markdown
