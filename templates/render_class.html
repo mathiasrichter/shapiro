@@ -16,7 +16,7 @@
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
-                <td>{{the_class.comment}}</td>
+                <td>{{the_class.comment| markdown}}</td>
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#subClassOf">Subclass of</a></td>
@@ -44,7 +44,7 @@
             {% for p in properties %}
             <tr>
                 <td><a href="{{p.iri}}">{{p.label | prune}}</a></td>
-                <td>{{p.comment}}</td>
+                <td>{{p.comment | markdown}}</td>
                 <td>
                     {% for t in prop_types[p.iri] %}
                     {{ t | url }}<br/>

@@ -3,13 +3,13 @@ import pytest
 from time import sleep
 import shutil
 import shapiro_server
-from shapiro_util import BadSchemaException, NotFoundException
-from shapiro_render import prune_iri, Subscriptable
+from shapiro_util import BadSchemaException, NotFoundException, prune_iri
+from shapiro_model import Subscriptable
 import subprocess
 
 ###########################################################################################
 # for running with an html coverage report :
-# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov-report=html
+# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov-report=html
 ###########################################################################################
 
 shapiro_server.CONTENT_DIR = "./test/ontologies"

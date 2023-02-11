@@ -16,7 +16,7 @@
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
-                <td>{{shape.comment}}</td>
+                <td>{{shape.comment | markdown}}</td>
             </tr>
             <tr>
                 <td class="fw-bolder">Defined in</td>
@@ -45,7 +45,7 @@
             {% for sp in shacl_props %}
             <tr>
                 <td><a href="{{sp.iri}}">{{sp.label | prune}}</a></td>
-                <td>{{sp.comment}}</td>
+                <td>{{sp.comment | markdown}}</td>
                 <td>
                     {% for n in shacl_prop_shapes[sp.iri] %}
                         <a href="{{n}}">{{n | prune}}</a><br/>

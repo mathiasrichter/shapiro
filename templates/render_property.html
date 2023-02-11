@@ -16,7 +16,7 @@
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
-                <td>{{property.comment}}</td>
+                <td>{{property.comment | markdown}}</td>
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#range">Type</a></td>
@@ -65,7 +65,7 @@
                 {% else %}
                     <td><a href="{{sp.iri}}">{{sp.label | prune}}</a></td>
                 {% endif %}
-                <td>{{sp.comment}}</td>
+                <td>{{sp.comment | markdown}}</td>
                 <td>
                     {% for n in shacl_prop_shapes[sp.iri] %}
                         <a href="{{n}}">{{n | prune}}</a><br/>

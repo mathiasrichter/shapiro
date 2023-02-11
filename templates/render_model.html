@@ -29,7 +29,7 @@
             {% for c in classes %}
             <tr>
                 <td><a href="{{c.iri}}">{{c.label}}</a></td>
-                <td>{{c.comment}}</td>
+                <td>{{c.comment | markdown}}</td>
             </tr>
             {% endfor %}
         </table>
@@ -48,7 +48,7 @@
             {% for s in shapes %}
             <tr>
                 <td><a href="{{s.iri}}">{{s.label}}</a></td>
-                <td>{{s.comment}}</td>
+                <td>{{s.comment | markdown}}</td>
             </tr>
             {% endfor %}
         </table>
@@ -67,7 +67,7 @@
             {% for p in properties %}
             <tr>
                 <td><a href="{{p.iri}}">{{p.label}}</a></td>
-                <td>{{p.comment}}</td>
+                <td>{{p.comment | markdown}}</td>
             </tr>
             {% endfor %}
         </table>
