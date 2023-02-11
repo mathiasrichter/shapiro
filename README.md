@@ -19,8 +19,23 @@ In order to do so, you need a way to serve the models - this is where Shapiro co
 ## Serving Schemas
 Shapiro serves schemas from a directory hierarchy in the file system (specifiec by the `content_dir`parameter at startup). Shapiro will regularly check new or modified schemas for syntax errors and exclude such "bad schemas" from getting served. Schemas can be moved into Shapiro's content_dir while it is running. This decouples the lifecycle for schemas from the lifecycle of Shapiro - the basic idea being that the lifecycle of schemas is managed in some code repository where changes get pushed into Shapiro's content directory without Shapiro having to be restarted.
 
+## Content Negotiation
+Shapiro will use the `accept` header of the get request for a schema to determine the mime type of its response, independent of the format that Shapiro holds the schema in on its file system:
+
+| Request Accept Header & Response Mime Type | Implementation Status |
+|:-------------------------------------------|:----------------------|
+| `application/ld+json`                      | implemented           |
+| `text/turtle`                              | implemented           |
+| `text/html`                                | implemented           |
+| `application/schema+json`                  | not yet implemented   |
+
+If no accept header is specified, Shapiro will assume `text/turtle` as default.
+
 ## Hierarchical Namespaces
 Shapiro allows you to keep schemas/ontologies in arbitrary namespace hierarchies - simply by reflecting namespaces as a directory hierarchy. This allows organizations to separate their schemas/ontologies across a hierarchical namespace and avoid any clashes. This also means you can have a more realxed governance around the various ontologies/schemas across a collaborating community. The assumption is that you manage your schemas/ontologies in a code repository (Github, etc.) and manage releases form there onto a Shapiro instance serving these schemas in a specific environment (dev/test/prod).
+
+## No URL fragments
+Shapiro is opinionated about URL fragments for referring to terms in a schema - it plainly does not support them ([here's why](https://blog.httpwatch.com/2011/03/01/6-things-you-should-know-about-fragment-urls/)). So when writing your schema a.k.a. model a.k.a. vocabulary a.k.a. ontology, please ensure you refer to the individual terms it defines using the regular forward slash: e.g. `http://myserver.com/myontology/term` instead of `http://myserver.com/myontology#term`
 
 ## Validation with Shapiro
 Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API features (serving schemas and validating data against schemas).
@@ -49,6 +64,7 @@ Shapiro uses Whoosh Full-text-search to index all schemas it serves. Shapiro reg
 
 ## Shapiro UI
 Shapiro provides a minimal UI available at `/welcome/`. Any `GET`request to `/` without a schema name to retrieve will also redirect to the UI. The ui lists all schemas served by Shapiro at a given point in time and allows to full-text-search schema content.
+The Shapiro UI also renders models/schemas/ontologies as HTML.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.
