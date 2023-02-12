@@ -127,6 +127,14 @@ def test_schema_fulltext_search():
     shutil.rmtree(
         shapiro_server.INDEX_DIR, ignore_errors=True
     )  # remove full-text-search indexes
+    
+
+def test_schema_fultext_search_exception():
+    shutil.rmtree(
+        shapiro_server.INDEX_DIR, ignore_errors=True
+    )  # remove full-text-search indexes so search fails
+    response = client.get("/search/?query=real")
+    assert response.status_code == 500
 
 
 def test_get_schema_list():
@@ -298,6 +306,34 @@ def test_get_existing_schema_with_duplicates():
     response = client.get("/dupes/person")
     assert response.status_code == 404
 
+
+def test_correct_sparql_query():
+    response = client.post("/query",
+        content="""
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+            SELECT DISTINCT ?instance ?type
+            WHERE
+            {
+                ?instance rdf:type ?type .
+            }
+        """)
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.status_code == 200
+    assert len(response.json()) > 2 # must not be empty, ie. []""
+
+def test_incorrect_sparql_query():
+    response = client.post("/query",
+        content="""
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#
+            SELECT DISTINCT ?instance
+            WHERE
+                ?instance rdf:type rdfs:Property 
+            }
+        """)
+    assert response.status_code == 406
+    
 
 def test_get_existing_schema_with_uncovered_mime_type():
     mime = "text/text"
@@ -706,8 +742,21 @@ def test_subscriptable():
     s = Subscriptable()
     with pytest.raises(Exception):
         s['foo']
+        
+def test_schema_housekeeping():
+    s = shapiro_server.SchemaHousekeeping(10)
+    s.perform_housekeeping_on([])
 
-# ensure this executes last 
+def test_search_housekeeping_unsuccessful():
+    shapiro_server.SearchIndexHousekeeping(index_dir="./")
+    
+# ensure this executes second to last
 def test_teardown():
     shapiro_server.shutdown()
     shapiro_back_instance.terminate()
+    
+# ensure this executes last
+def test_shapiro_main():
+    shapiro_server.main([])
+    shapiro_server.shutdown()
+

@@ -49,6 +49,8 @@ HOUSEKEEPERS = []
 
 BASE_URL = None
 
+EKG = None
+
 HTML_RENDERER = HtmlRenderer()
 
 log = logging.getLogger("uvicorn")
@@ -105,7 +107,36 @@ class SchemaHousekeeping(Thread):
             schemas (List[str]): List of schema files to perform housekeeping on.
         """
         pass
+    
+    
+class EKGHouseKeeping(SchemaHousekeeping):
+    """
+    Build/rebuild the Knowledge Graph of all schemas, so it
+    can be queried in its entirety using SPARQL.
+    """
 
+    def __init__(self, sleep_seconds: float = 60.0 * 10.0):
+        super().__init__(sleep_seconds)
+
+    def perform_housekeeping_on(self, schemas: List[str]):    
+        """
+        Build/rebuild the Knowledge Graph of all schemas, so it
+        can be queried in its entirety using SPARQL.
+        """
+        global EKG
+        if EKG is None or len(schemas) > 0:
+            log.info("Housekeeping: Rebuilding knowledge graph.")
+            EKG = Graph()
+            walk_schemas(CONTENT_DIR, self.add_schema)            
+            
+    def add_schema(self, path: str, full_name: str, schema_path: str, suffix: str):
+        if full_name not in BAD_SCHEMAS:
+            try:
+                with open(full_name, "r") as f:
+                    EKG.parse(file=f)
+                log.info("Housekeeping: Ingested '{}' into knowledge graph.".format(full_name))
+            except Exception  as x:
+                log.error("Could not ingest '{}' into knowledge graph: {}".format(schema_path, x))        
 
 class BadSchemaHousekeeping(SchemaHousekeeping):
     """
@@ -160,20 +191,20 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
     Regularly index new or changed schemas in the search index for providing full text search in schemas.
     """
 
-    def __init__(self, sleep_seconds: float = 60.0 * 30.0):
+    def __init__(self, index_dir:str = INDEX_DIR, sleep_seconds: float = 60.0 * 30.0):
         super().__init__(sleep_seconds)
         schema = Schema(
             full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer())
         )
-        log.info("Housekeeping: Using index directory '{}'".format(INDEX_DIR))
-        if not os.path.exists(INDEX_DIR):
+        log.info("Housekeeping: Using index directory '{}'".format(index_dir))
+        if os.path.exists(index_dir) == False:
             log.info("Housekeeping: Creating search index for schemas.")
-            os.mkdir(INDEX_DIR)
-            self.index = whoosh_index.create_in(INDEX_DIR, schema)
+            os.mkdir(index_dir)
+            self.index = whoosh_index.create_in(index_dir, schema)
         else:
             log.info("Housekeeping: Using existing search index for schemas.")
             try:
-                self.index = whoosh_index.open_dir(INDEX_DIR)
+                self.index = whoosh_index.open_dir(index_dir)
             except:
                 log.error("Houskeeping: Index directory does not contain index files.")
 
@@ -202,6 +233,7 @@ def init():
     global HOUSEKEEPERS
     HOUSEKEEPERS.append(BadSchemaHousekeeping())
     HOUSEKEEPERS.append(SearchIndexHousekeeping())
+    HOUSEKEEPERS.append(EKGHouseKeeping())
     for h in HOUSEKEEPERS:
         h.start()
 
@@ -349,7 +381,35 @@ def get_schema(schema_path: str = None, accept_mime:str = None, request:Request 
                 return JSONResponse(
                     content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
                 )
-        
+
+@app.post("/query", status_code=200)
+async def query(request: Request):
+    """
+    Query the knowledge graph of all schemas with the SPARQL query
+    specified in the request body and return the result.
+    """
+    query = await request.body()
+    try:
+        result = EKG.query(query)      
+        json ="["
+        for r in result:
+            if json[len(json)-1] == '}':
+                json += ","
+            json += '{'
+            for l in r.labels:
+                if json[len(json)-1] == '"':
+                    json += ","
+                json += '"'+l+'":'+'"'+str(r[l])+'"'
+            json += '}'
+        json += ']'
+        return JSONResponse(
+            content=json, status_code=status.HTTP_200_OK
+        )        
+    except Exception as x:
+        log.error("Could not execute query: {}".format(x))
+        return JSONResponse(
+            content={"err_msg": str(x)}, media_type="application/json", status_code=status.HTTP_406_NOT_ACCEPTABLE
+        )
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
