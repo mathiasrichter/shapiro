@@ -43,7 +43,17 @@ var setTable = function(search_text)
                 'dataSrc': 'schemas'
             },
             'columns': [
-                {'data': 'schema_path'}, 
+                {
+                    'data': 'link',
+                    'render': function(data, type, row, meta)
+                    {
+                        if (type === 'display')
+                        {
+                            return '<a href="' + data + '">'+data.substring(window.location.origin.length+1, data.length)+'</a>'
+                        }
+                        return data;
+                    }
+                }, 
                 {'data': 'full_name'},
                 {
                     'data': 'link',
