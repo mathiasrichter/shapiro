@@ -1,6 +1,6 @@
 from rdflib import Graph, URIRef, BNode
 from rdflib.plugins.sparql import prepareQuery
-from typing import Tuple
+from typing import Tuple, List
 from shapiro_util import NotFoundException, prune_iri
 from urllib.parse import urlparse
 
@@ -141,7 +141,7 @@ class RdfProperty(SemanticModelElement):
     def __init__(self, iri:str):
         super().__init__(iri)
         
-    def query(self, query:str) -> list[str]:
+    def query(self, query:str) -> List[str]:
         qresult = self.graph.query(query, initBindings={'property': URIRef(self.iri)})
         result = []
         for r in qresult:
@@ -149,16 +149,16 @@ class RdfProperty(SemanticModelElement):
         result.sort(key=lambda c: c)
         return result
     
-    def get_property_type(self) -> list[str]:
+    def get_property_type(self) -> List[str]:
         return self.query(self.RANGE_QUERY)
 
-    def get_superproperties(self) -> list[str]:
+    def get_superproperties(self) -> List[str]:
         return self.query(self.SUPERPROPS_QUERY)
 
-    def get_classes(self) -> list[str]:
+    def get_classes(self) -> List[str]:
         return self.query(self.CLASSES_QUERY)
     
-    def get_shacl_properties(self) -> list[str]:
+    def get_shacl_properties(self) -> List[str]:
         result = self.graph.query(self.SHACL_PROP_QUERY, initBindings={'property': URIRef(self.iri)})
         props = []
         for r in result:
@@ -189,7 +189,7 @@ class NodeShape(SemanticModelElement):
     def __init__(self, iri:str):
         super().__init__(iri)
         
-    def get_shacl_properties(self) -> list['ShaclProperty']:
+    def get_shacl_properties(self) -> List['ShaclProperty']:
         result = self.graph.query(self.SHACL_PROP_QUERY, initBindings={'shape': URIRef(self.iri)})
         props = []
         for r in result:
@@ -197,7 +197,7 @@ class NodeShape(SemanticModelElement):
         props.sort(key=lambda p:p.label)
         return props
        
-    def get_classes(self) -> list['RdfClass']:
+    def get_classes(self) -> List['RdfClass']:
         result = self.graph.query(self.CLASS_QUERY, initBindings={'shape': URIRef(self.iri)})
         classes = []
         for r in result:
@@ -238,7 +238,7 @@ class RdfClass(SemanticModelElement):
     def __init__(self, iri:str):
         super().__init__(iri)
 
-    def get_properties(self) -> list[RdfProperty]:
+    def get_properties(self) -> List[RdfProperty]:
         result = self.graph.query(self.PROPERTY_QUERY, initBindings={'class': URIRef(self.iri)})
         props = []
         for r in result:
@@ -254,7 +254,7 @@ class RdfClass(SemanticModelElement):
         superclasses.sort(key=lambda c: c.label)
         return superclasses
     
-    def get_nodeshapes(self) -> list[NodeShape]:
+    def get_nodeshapes(self) -> List[NodeShape]:
         result = self.graph.query(self.SHAPE_QUERY, initBindings={'class': URIRef(self.iri)})
         shapes = []
         for r in result:
@@ -291,7 +291,7 @@ class ShaclProperty(SemanticModelElement):
     def __init__(self, iri:str, graph: Graph):
         super().__init__(iri, graph)
              
-    def get_constraints(self) -> list[ShaclConstraint]:
+    def get_constraints(self) -> List[ShaclConstraint]:
         prop = None
         if urlparse(self.iri).scheme == '': #  if this is a blank node
             prop = BNode(self.iri)
@@ -388,7 +388,7 @@ class SemanticModel(SemanticModelElement):
             instances.append(type_class(str(r.instance)))
         return instances
     
-    def get_classes(self) -> list[RdfClass]:
+    def get_classes(self) -> List[RdfClass]:
         # can't use the generic query here as we explicitly need to exclude rdfs & shacl properties
         # (which end up being classes themselves)
         result = self.graph.query(self.CLASS_QUERY)
@@ -398,17 +398,17 @@ class SemanticModel(SemanticModelElement):
         classes.sort(key=lambda c: c.label)
         return classes
    
-    def get_properties(self) -> list[RdfProperty]:
+    def get_properties(self) -> List[RdfProperty]:
         result = self.get_instances_of_type(self.RDFS_PROPERTY, RdfProperty)
         result.sort(key=lambda c: c.label)
         return result
     
-    def get_node_shapes(self) -> list[NodeShape]:
+    def get_node_shapes(self) -> List[NodeShape]:
         shapes = self.get_instances_of_type(self.SHACL_NODESHAPE, NodeShape)
         shapes.sort(key=lambda c: c.label)
         return shapes
     
-    def get_shacl_properties(self) -> list[ShaclProperty]:
+    def get_shacl_properties(self) -> List[ShaclProperty]:
         result = self.graph.query(self.SHACL_PROP_QUERY)
         props = []
         for r in result:
