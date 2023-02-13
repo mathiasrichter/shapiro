@@ -305,7 +305,7 @@ async def search(query: str = None, request: Request = None):
     served by this server. Returns hits in order of relevance.
     """
     global BASE_URL
-    if BASE_URL is None and request:
+    if BASE_URL is None and request is not None:
         BASE_URL = str(request.base_url)
     if query is None or query == "":
         log.info("No search query specified, returning full schema list.")
@@ -343,7 +343,7 @@ def get_schema(schema_path: str = None, accept_mime:str = None, request:Request 
     Currently supported mime types are 'application/ld+json', 'text/turtle'.
     """
     global BASE_URL
-    if BASE_URL is None:
+    if BASE_URL is None and request is not None:
         BASE_URL = str(request.base_url)
     accept_header = accept_mime
     if (accept_header == "" or accept_header is None):
