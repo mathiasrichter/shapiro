@@ -308,7 +308,7 @@ def test_get_existing_schema_with_duplicates():
 
 
 def test_correct_sparql_query():
-    response = client.post("/query",
+    response = client.post("/query/",
         content="""
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
@@ -323,7 +323,7 @@ def test_correct_sparql_query():
     assert len(response.json()) > 2 # must not be empty, ie. []""
 
 def test_incorrect_sparql_query():
-    response = client.post("/query",
+    response = client.post("/query/",
         content="""
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#

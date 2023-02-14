@@ -334,6 +334,43 @@ async def search(query: str = None, request: Request = None):
         log.error("Could not perform search: {}".format(x))
         return Response(content="Could not perform search.", status_code=500)
 
+# @app.get("/query/", status_code=200)
+# def query_page(request:Request):
+#     global BASE_URL
+#     if BASE_URL is None:
+#         BASE_URL = str(request.base_url)
+#     query_page = env.get_template("query.html").render(url=BASE_URL)
+#     return HTMLResponse(content=query_page)
+
+@app.post("/query/", status_code=200)
+async def query(request: Request):
+    """
+    Query the knowledge graph of all schemas with the SPARQL query
+    specified in the request body and return the result.
+    """
+    query = await request.body()
+    try:
+        result = EKG.query(query)      
+        json ="["
+        for r in result:
+            if json[len(json)-1] == '}':
+                json += ","
+            json += '{'
+            for l in r.labels:
+                if json[len(json)-1] == '"':
+                    json += ","
+                json += '"'+l+'":'+'"'+str(r[l])+'"'
+            json += '}'
+        json += ']'
+        return JSONResponse(
+            content=json, status_code=status.HTTP_200_OK
+        )        
+    except Exception as x:
+        log.error("Could not execute query: {}".format(x))
+        return JSONResponse(
+            content={"err_msg": str(x)}, media_type="application/json", status_code=status.HTTP_406_NOT_ACCEPTABLE
+        )
+
 # usage of ":path"as per https://www.starlette.io/routing/#path-parameters
 @app.get("/{schema_path:path}", status_code=200)
 def get_schema(schema_path: str = None, accept_mime:str = None, request:Request = None):
@@ -381,35 +418,6 @@ def get_schema(schema_path: str = None, accept_mime:str = None, request:Request 
                 return JSONResponse(
                     content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
                 )
-
-@app.post("/query", status_code=200)
-async def query(request: Request):
-    """
-    Query the knowledge graph of all schemas with the SPARQL query
-    specified in the request body and return the result.
-    """
-    query = await request.body()
-    try:
-        result = EKG.query(query)      
-        json ="["
-        for r in result:
-            if json[len(json)-1] == '}':
-                json += ","
-            json += '{'
-            for l in r.labels:
-                if json[len(json)-1] == '"':
-                    json += ","
-                json += '"'+l+'":'+'"'+str(r[l])+'"'
-            json += '}'
-        json += ']'
-        return JSONResponse(
-            content=json, status_code=status.HTTP_200_OK
-        )        
-    except Exception as x:
-        log.error("Could not execute query: {}".format(x))
-        return JSONResponse(
-            content={"err_msg": str(x)}, media_type="application/json", status_code=status.HTTP_406_NOT_ACCEPTABLE
-        )
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
@@ -696,12 +704,14 @@ def get_ranked_mime_types(accept_header: str):
                 q_buckets["1.0"] = []
             q_buckets["1.0"].append(mime_type)
         else:
-            q = mime_type.split(";")[1].split("=")[1]
-            if float(q) not in weights:
-                weights.append(float(q))
-            if q not in q_buckets.keys():
-                q_buckets[q] = []
-            q_buckets[q].append(mime_type.split(";")[0])
+            key = mime_type.split(";")[1].split("=")[0]
+            if key.lower() == 'q': # only process q-weights
+                q = mime_type.split(";")[1].split("=")[1]
+                if float(q) not in weights:
+                    weights.append(float(q))
+                if q not in q_buckets.keys():
+                    q_buckets[q] = []
+                q_buckets[q].append(mime_type.split(";")[0])
     result = []
     weights.sort(reverse=True)
     for w in weights:

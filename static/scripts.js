@@ -23,10 +23,24 @@ window.addEventListener('DOMContentLoaded', event => {
 
 var resetTable = function() {
     $('#schemaList').DataTable().destroy();
-    setTable()    
+    setSchemaTable()    
 }
 
-var setTable = function(search_text)
+var query = function()
+{
+    $('#resultList').DataTable( 
+        {
+            "processing": true,
+            "ajax": {
+                'method': 'POST',
+                'url': '/query/',
+                "processData": false,
+                'data': $('#sparqlQuery').val()
+            }
+        });
+}
+
+var setSchemaTable = function(search_text)
 {
     if (search_text == undefined)
     {
@@ -94,7 +108,7 @@ var viewCode = function(link)
 var search = function()
 {
     $('#schemaList').DataTable().destroy();
-    setTable($('#searchText').val())
+    setSchemaTable($('#searchText').val())
     if ($('#searchText').val() != undefined && $('#searchText').val() != '')
     {
         $('#schemaTableHeader').text('Search Results for ' + $('#searchText').val())
