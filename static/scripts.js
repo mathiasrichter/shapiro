@@ -26,19 +26,19 @@ var resetTable = function() {
     setSchemaTable()    
 }
 
-var query = function()
-{
-    $('#resultList').DataTable( 
-        {
-            "processing": true,
-            "ajax": {
-                'method': 'POST',
-                'url': '/query/',
-                "processData": false,
-                'data': $('#sparqlQuery').val()
-            }
-        });
-}
+// var query = function()
+// {
+//     $('#resultList').DataTable( 
+//         {
+//             "processing": true,
+//             "ajax": {
+//                 'method': 'POST',
+//                 'url': '/query/',
+//                 "processData": false,
+//                 'data': $('#sparqlQuery').val()
+//             }
+//         });
+// }
 
 var setSchemaTable = function(search_text)
 {

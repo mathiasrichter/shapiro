@@ -692,6 +692,8 @@ def get_ranked_mime_types(accept_header: str):
     mime type comes first. If multiple mime types have the same q-factor assigned,
     they will be taken in the order as specified in the accept header.
     """
+    if accept_header is None:
+        accept_header = ""
     mime_types = accept_header.split(",")
     weights = []
     q_buckets = {}
