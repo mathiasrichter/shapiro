@@ -185,7 +185,6 @@ def test_render_shape():
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
 
-
 def test_render_property():
     mime_in = "text/html"
     response = client.get("/com/example/org/person/PersonName", headers={"accept": mime_in})
@@ -255,6 +254,17 @@ def test_get_existing_jsonld_schema_as_ttl():
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
+def test_get_existing_jsonld_schema_as_ttl_with_long_accept_header():
+    mime_in = "application/rdf+xml,application/ld+json;q=1,text/turtle;v=b3;q=0.5,text/html"
+    response = client.get("/person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith("application/ld+json")
+    assert response.status_code == 200
+
+def test_get_existing_jsonld_schema_as_ttl_with_long_accept_header_lower_q():
+    mime_in = "application/rdf+xml,application/ld+json;q=0.5,text/turtle;v=b3;q=0.8,text/html;q=0.9"
+    response = client.get("/com/example/org/person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith("text/html")
+    assert response.status_code == 200
 
 def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_jsonld():
     mime = "application/ld+json"
@@ -741,7 +751,7 @@ def test_prune():
 def test_subscriptable():
     s = Subscriptable()
     with pytest.raises(Exception):
-        s['foo']
+        s['non_existing_key']
         
 def test_schema_housekeeping():
     s = shapiro_server.SchemaHousekeeping(10)
@@ -754,9 +764,11 @@ def test_search_housekeeping_unsuccessful():
 def test_teardown():
     shapiro_server.shutdown()
     shapiro_back_instance.terminate()
-    
+    shutil.rmtree(
+        shapiro_server.INDEX_DIR, ignore_errors=True
+    )  # clean up full-text-search indexes    
+
 # ensure this executes last
 def test_shapiro_main():
     shapiro_server.main([])
     shapiro_server.shutdown()
-

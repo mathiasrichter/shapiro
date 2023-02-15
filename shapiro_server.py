@@ -37,7 +37,7 @@ SUFFIX_JSONLD = ".jsonld"
 SUFFIX_TTL = ".ttl"
 SUPPORTED_SUFFIXES = [SUFFIX_JSONLD, SUFFIX_TTL]
 
-SUPPORTED_MIME_TYPES = [MIME_JSONLD, MIME_TTL, MIME_HTML]
+SUPPORTED_MIME_TYPES = [MIME_JSONLD.lower(), MIME_TTL.lower(), MIME_HTML.lower()]
 
 IGNORE_NAMESPACES = []
 
@@ -706,14 +706,18 @@ def get_ranked_mime_types(accept_header: str):
                 q_buckets["1.0"] = []
             q_buckets["1.0"].append(mime_type)
         else:
-            key = mime_type.split(";")[1].split("=")[0]
-            if key.lower() == 'q': # only process q-weights
-                q = mime_type.split(";")[1].split("=")[1]
-                if float(q) not in weights:
-                    weights.append(float(q))
-                if q not in q_buckets.keys():
-                    q_buckets[q] = []
-                q_buckets[q].append(mime_type.split(";")[0])
+            for k in mime_type.split(";"): # there is not only q factors
+                key = k.split("=")[0]              
+                if key.lower() == 'q': # only process q-weights
+                    q = k.split("=")[1]
+                    q = float(q)
+                    if q not in weights:
+                        weights.append(q)
+                    q = str(q)
+                    if q not in q_buckets.keys():
+                        q_buckets[q] = []
+                    q_buckets[q].append(mime_type.split(";")[0])
+                    
     result = []
     weights.sort(reverse=True)
     for w in weights:

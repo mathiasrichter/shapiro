@@ -57,7 +57,10 @@ class SemanticModelElement(Subscriptable):
                         self.graph = Graph().parse(iri)
                 except Exception as x:
                     # happens when the overall ontology is exists, but any term contained does not resolve (e.g. if the IRIs are wrong)
-                    raise NotFoundException("Cannot resolve the requested term in the existing ontology '{}' ({})".format(iri,x))
+                    msg = msg = "Cannot resolve the requested term in the existing ontology '{}' ({})".format(iri,x)
+                    if '#' in iri:
+                        msg += " It looks like your IRI contains a URL fragment ('#') not supported by Shapiro."
+                    raise NotFoundException(msg)
             self.label, self.title, self.comment, self.description, self.definition = self.get_label_and_descriptions()
             if self.label == "" and self.title == "":
                 self.label = self.title = prune_iri(self.iri, True)
