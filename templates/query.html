@@ -10,40 +10,42 @@
         <script src="https://use.fontawesome.com/releases/v6.1.0/js/all.js" crossorigin="anonymous"></script>
         <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css" />
         <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css" />
+        <link href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
         <link href="{{ url }}static/styles.css" rel="stylesheet" />
     </head>
     <body id="page-top">
-        <a href = "{{ url }}" title = "Shapiro Home">
-            <nav class="navbar navbar-expand-lg bg-secondary text-white text-uppercase fixed-top" id="mainNav">
-                <div class="container">
-                        <img src="{{ url }}static/shapiro.png" alt="..." width="7%" height="auto">
-                        <div class="container">
-                            <h3>Shapiro</h3>
-                            Your friendly semantic companion
-                        </div>
-                </div>
-            </nav>
-        </a>
+        <nav class="navbar navbar-expand-lg bg-secondary text-white text-uppercase fixed-top" id="mainNav">
+            <div class="container">
+                    <img src="{{ url }}static/shapiro.png" alt="..." width="7%" height="auto">
+                    <div class="container">
+                        <h3>Shapiro</h3>
+                        Your friendly semantic companion
+                    </div>
+            </div>
+            <div class="container col-sm-2">
+                <button class="btn btn-primary bg-primary no-shadow"><a href="{{ url }}welcome/">Home</a></button>
+            </div>
+        </nav>
         <header class="masthead bg-primary text-white text-center pb-4 align-center">
             <div class="row justify-content-md-center">
             </div>
         </header>
-
-        <div class="row justify-content-md-center pb-2 pt-5">
-            <textarea class="col-sm-8" type="text" id="sparqlQuery" placeholder="SPARQL Query"></textarea>
-        </div>
-        <div class="row justify-content-md-center pt-2 pb-5">
-            <button class="col-sm-1 btn btn-secondary" onclick="query()">Query</button>
-        </div>
-
+        <section class="page-section pt-4 pb-4">
+            <div class="container">
+                <div class="row justify-content-md-center pb-2 pt-5">
+                    <textarea class="col-sm-8" type="text" id="sparqlQuery" placeholder="SPARQL Query"></textarea>
+                </div>
+                <div class="row justify-content-md-center pt-2 pb-5">
+                    <button class="col-sm-1 btn btn-secondary shadow-none" onclick="query()">Query</button>
+                </div>
+            </div>
+        </section>
         <section class="page-section pt-4 pb-4">
             <div class="container">
                 <table id="resultList" class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
                 </table>
             </div>
         </section>
-
-
         <footer class="footer text-center pb-4 pt-4">
             <div class="container">
                 <div class="row">
@@ -65,6 +67,13 @@
         </footer>
         <div class="copyright py-4 text-center text-white">
             <div class="container"><small></small></div>
+        </div>
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModal" aria-hidden="true">
+            <div class="modal-dialog modal-l alert alert-danger modal-content">
+                <h6 id="errorModalTitle" class="text-secondary ms-3 mt-3 pb-0 mb-0"></h6>
+                <div id="errorModalContent" class="modal-body text-center pb-0">
+                </div>
+            </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" type="text/javascript"></script>
         <script src="{{ url }}static/scripts.js" type="text/javascript"></script>

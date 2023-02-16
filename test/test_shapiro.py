@@ -316,6 +316,10 @@ def test_get_existing_schema_with_duplicates():
     response = client.get("/dupes/person")
     assert response.status_code == 404
 
+def test_get_query_ui():
+    response = client.get("/query/")
+    assert response.status_code == 200
+
 
 def test_correct_sparql_query():
     response = client.post("/query/",
@@ -743,6 +747,24 @@ def test_validate_with_localhost_with_compliant_ttl_list_data():
         assert response.status_code == 200
         report = response.json()
         assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
+
+def test_get_ranked_mime_types_with_none():
+    result = shapiro_server.get_ranked_mime_types(None)
+    assert result == ['']
+
+def test_no_base_url():
+    shapiro_server.BASE_URL = None
+    response = client.get("/query/")
+    assert response.status_code == 200
+    shapiro_server.BASE_URL = None
+    response = client.get("/search/")
+    assert response.status_code == 200
+    shapiro_server.BASE_URL = None
+    response = client.get("/schemas/")
+    assert response.status_code == 200
+    shapiro_server.BASE_URL = None
+    response = client.get("/welcome/")
+    assert response.status_code == 200
 
 def test_prune():
     p = prune_iri("/a/b/c/")

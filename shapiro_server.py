@@ -334,13 +334,13 @@ async def search(query: str = None, request: Request = None):
         log.error("Could not perform search: {}".format(x))
         return Response(content="Could not perform search.", status_code=500)
 
-# @app.get("/query/", status_code=200)
-# def query_page(request:Request):
-#     global BASE_URL
-#     if BASE_URL is None:
-#         BASE_URL = str(request.base_url)
-#     query_page = env.get_template("query.html").render(url=BASE_URL)
-#     return HTMLResponse(content=query_page)
+@app.get("/query/", status_code=200)
+def query_page(request:Request):
+    global BASE_URL
+    if BASE_URL is None:
+        BASE_URL = str(request.base_url)
+    query_page = env.get_template("query.html").render(url=BASE_URL)
+    return HTMLResponse(content=query_page)
 
 @app.post("/query/", status_code=200)
 async def query(request: Request):
@@ -351,7 +351,7 @@ async def query(request: Request):
     query = await request.body()
     try:
         result = EKG.query(query)      
-        json ="["
+        json ='['
         for r in result:
             if json[len(json)-1] == '}':
                 json += ","

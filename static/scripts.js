@@ -26,19 +26,99 @@ var resetTable = function() {
     setSchemaTable()    
 }
 
-// var query = function()
-// {
-//     $('#resultList').DataTable( 
-//         {
-//             "processing": true,
-//             "ajax": {
-//                 'method': 'POST',
-//                 'url': '/query/',
-//                 "processData": false,
-//                 'data': $('#sparqlQuery').val()
-//             }
-//         });
-// }
+var showError = function(title, msg)
+{
+    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'), {
+        keyboard: false
+      });
+    $("#errorModalTitle").html(title);
+    $( "#errorModalContent" ).html(msg);
+    errorModal.show()
+}
+
+var query = function()
+{
+    // as per https://stackoverflow.com/questions/32713612/jquery-datatables-destroy-re-create
+    if ( $.fn.DataTable.isDataTable('#resultList') ) 
+    {
+        $('#resultList').DataTable().destroy();
+    }
+    $('#resultList tbody').empty();
+    $('#resultList thead').empty();
+    $( "#errorModalContent" ).html( "" );
+    var k = $.ajax({
+        method: 'POST',
+        url: '/query/',
+        data: $('#sparqlQuery').val(),
+        error: function(response, status, error) 
+        {
+            var msg = "No error details available."
+            try 
+            {
+                msg = $.parseJSON(response.responseText).err_msg
+            } catch (error)
+            {
+                msg = response.responseText
+                if (msg == "" || msg == null)
+                {
+                    msg = response.status + " - " + response.statusText
+                    if ( msg == "0 - error")
+                    {
+                        msg = "No error details available. Is the server running?"
+                    }
+                }
+            }
+            showError("Could not execute SPARQL Query", msg );
+        },
+        success: function(data, text, jxqr) 
+        {
+            try 
+            {
+                data = $.parseJSON(data)
+                cols = [{title: "Query did not yield any data"}]
+                if (data.length > 0)
+                {
+                    cols=[]
+                    e = data[0]
+                    keys=Object.keys(e)
+                    for (k in keys)
+                    {
+                        cols.push(
+                            {
+                                title:keys[k], 
+                                data:keys[k],
+                                render: function(data, type, row, meta)
+                                        {
+                                            if (type === 'display')
+                                            {
+                                                if (data.toString().startsWith("http"))
+                                                {
+                                                    return '<a href="' + data + '">'+ data +'</a>'
+                                                } else
+                                                {
+                                                    return data
+                                                }
+                                            }
+                                            return data;
+                                        }
+                            }
+                        )
+                    }
+                }
+                $('#resultList').DataTable( 
+                    {
+                        destroy: true,
+                        data: data,
+                        columns: cols
+                    }
+                );
+            } catch ( error )
+            {
+                showError("Error processing SPARQL Result", error.toString())
+            }
+        }
+    });
+}
 
 var setSchemaTable = function(search_text)
 {

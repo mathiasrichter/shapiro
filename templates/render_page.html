@@ -13,17 +13,18 @@
         <link href="{{ url }}static/styles.css" rel="stylesheet" />
     </head>
     <body id="page-top">
-        <a href = "{{ url }}" title = "Shapiro Home">
-            <nav class="navbar navbar-expand-lg bg-secondary text-white text-uppercase fixed-top" id="mainNav">
-                <div class="container">
-                        <img src="{{ url }}static/shapiro.png" alt="..." width="7%" height="auto">
-                        <div class="container">
-                            <h3>Shapiro</h3>
-                            Your friendly semantic companion
-                        </div>
-                </div>
-            </nav>
-        </a>
+        <nav class="navbar navbar-expand-lg bg-secondary text-white text-uppercase fixed-top" id="mainNav">
+            <div class="container">
+                    <img src="{{ url }}static/shapiro.png" alt="..." width="7%" height="auto">
+                    <div class="container">
+                        <h3>Shapiro</h3>
+                        Your friendly semantic companion
+                    </div>
+            </div>
+            <div class="container col-sm-2">
+                <button class="btn btn-primary bg-primary no-shadow"><a href="{{ url }}welcome/">Home</a></button>
+            </div>
+        </nav>
         <header class="masthead bg-primary text-white text-center pb-4 align-center">
             <div class="row justify-content-md-center">
             </div>
