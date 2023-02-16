@@ -10,7 +10,7 @@ Make the use of these machine-readable model definitions pervasive throughout al
 
 Express non-functional requirements like security, traceability/lineage, data quality in the models and bind them to the instances of data wherever the data is distributed to and used.
 
-Drive all documentation (model diagrams, documents, graph visualizations, etc.) from the same JSON-LD model definition (a.k.a. ontology/knowledge graph).
+Drive all documentation (model diagrams, documents, graph visualizations, etc.) from the same RDF-based model definition (a.k.a. ontology/knowledge graph).
 
 Start out with providing a toolset from developers for developers for formulating such models and using them in source code, gradually extending towards tools, editors, UIs, transformations making this modelling approach accessible to non-technical actors like business analysts, domain data owners, etc.
 
@@ -30,6 +30,9 @@ Shapiro will use the `accept` header of the get request for a schema to determin
 | `application/schema+json`                  | not yet implemented   |
 
 If no accept header is specified, Shapiro will assume `text/turtle` as default.
+
+### Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions
+When rendering for mime type `text/html` Shapiro will consider markdown in RDFS comments, SKOS definitions, DCT descriptions for improved readability of documentation.
 
 ### No URL fragments
 Shapiro is opinionated about URL fragments for referring to terms in a schema - it plainly does not support them ([here's why](https://blog.httpwatch.com/2011/03/01/6-things-you-should-know-about-fragment-urls/)). So when writing your schema a.k.a. model a.k.a. vocabulary a.k.a. ontology, please ensure you refer to the individual terms it defines using the regular forward slash: e.g. `http://myserver.com/myontology/term` instead of `http://myserver.com/myontology#term`
