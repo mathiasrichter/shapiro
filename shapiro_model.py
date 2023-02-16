@@ -14,6 +14,7 @@ class Subscriptable:
 class SemanticModelElement(Subscriptable):
 
     RDFS_CLASS = 'http://www.w3.org/2000/01/rdf-schema#Class'
+    RDF_PROPERTY = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property'
     RDFS_PROPERTY = 'http://www.w3.org/2000/01/rdf-schema#Property'
     SHACL_NODESHAPE = 'http://www.w3.org/ns/shacl#NodeShape'
     SHACL_PROPERTY = 'http://www.w3.org/ns/shacl#Property'
@@ -104,31 +105,55 @@ class RdfProperty(SemanticModelElement):
     
     CLASSES_QUERY = prepareQuery("""
         PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         SELECT DISTINCT ?result
         WHERE
         {
-            ?property rdf:type rdfs:Property .
-            OPTIONAL { ?property rdfs:domain ?result . }
+            {
+                ?property rdf:type rdfs:Property .
+                OPTIONAL { ?property rdfs:domain ?result . }
+            }
+            UNION
+            {
+                ?property rdf:type rdf:Property .
+                OPTIONAL { ?property rdfs:domain ?result . }
+            }
         }
         """)
 
     SUPERPROPS_QUERY = prepareQuery("""
         PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         SELECT DISTINCT ?result
         WHERE
         {
-            ?property rdf:type rdfs:Property .
-            OPTIONAL { ?property rdfs:subPropertyOf ?result . }
+            {
+                ?property rdf:type rdfs:Property .
+                OPTIONAL { ?property rdfs:subPropertyOf ?result . }
+            }
+            UNION
+            {
+                ?property rdf:type rdf:Property .
+                OPTIONAL { ?property rdfs:subPropertyOf ?result . }
+            }
         }
         """)
 
     RANGE_QUERY = prepareQuery("""
         PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         SELECT DISTINCT ?result
         WHERE
         {
-            ?property rdf:type rdfs:Property .
-            OPTIONAL { ?property rdfs:range ?result . }
+            {
+                ?property rdf:type rdfs:Property .
+                OPTIONAL { ?property rdfs:range ?result . }
+            }
+            UNION
+            {
+                ?property rdf:type rdf:Property .
+                OPTIONAL { ?property rdfs:range ?result . }
+            }
         }
         """)
 
@@ -220,12 +245,21 @@ class RdfClass(SemanticModelElement):
         """)
 
     PROPERTY_QUERY = prepareQuery("""
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+
         SELECT DISTINCT ?property
         WHERE
         {
-            ?property rdf:type rdfs:Property .
-            ?property rdfs:domain ?class .
+            {
+                ?property rdf:type rdfs:Property .
+                ?property rdfs:domain ?class .
+            }
+            UNION
+            {
+                ?property rdf:type rdf:Property .
+                ?property rdfs:domain ?class .
+            }
         }
         """)
 
@@ -342,7 +376,7 @@ class SemanticModel(SemanticModelElement):
                 {
                     ?instance rdf:type rdfs:Class .
                     MINUS {
-                        ?instance rdf:type rdfs:Property .
+                        ?instance rdf:type rdf:Property .                        
                         ?instance rdf:type rdfs:Property .
                         ?instance rdf:type sh:property .
                         ?instance rdf:type sh:PropertyShape .
@@ -403,6 +437,7 @@ class SemanticModel(SemanticModelElement):
    
     def get_properties(self) -> List[RdfProperty]:
         result = self.get_instances_of_type(self.RDFS_PROPERTY, RdfProperty)
+        result += self.get_instances_of_type(self.RDF_PROPERTY, RdfProperty)
         result.sort(key=lambda c: c.label)
         return result
     

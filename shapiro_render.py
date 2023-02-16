@@ -66,7 +66,7 @@ class HtmlRenderer:
         for t in s.get_types_of_instance(iri):
             if t == s.RDFS_CLASS:
                 content += self.render_class(base_url, s)
-            elif t == s.RDFS_PROPERTY:
+            elif t == s.RDFS_PROPERTY or t == s.RDF_PROPERTY:
                 content += self.render_property(base_url, s)
             elif t == s.SHACL_NODESHAPE:
                 content += self.render_nodeshape(base_url, s)

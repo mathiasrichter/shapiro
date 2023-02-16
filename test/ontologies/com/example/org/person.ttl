@@ -1,6 +1,7 @@
 @prefix : <http://127.0.0.1:8000/com/example/org/person/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos:<http://www.w3.org/2004/02/skos/core#> .
 @prefix dct: <http://purl.org/dc/terms/> .
@@ -34,12 +35,22 @@
     rdfs:subClassOf schema:Thing
 .
 
-:PersonName a rdfs:Property ;
-  rdfs:label "PersonName";
+:PersonOtherName a rdf:Property ;
+  rdfs:label "PersonName (RDF)";
   dct:title "PersonName";
-  rdfs:comment "A person's name.";
-  dct:description "A person's name.";
-  skos:definition "A person's name.";
+  rdfs:comment "A person's name as RDF Property.";
+  dct:description "A person's name as RDF Property.";
+  skos:definition "A person's name as RDF Property.";
+  rdfs:range xsd:string;
+  rdfs:domain :Person;
+.
+
+:PersonName a rdfs:Property ;
+  rdfs:label "PersonName (RDFS)";
+  dct:title "PersonName";
+  rdfs:comment "A person's name as RDFS Property.";
+  dct:description "A person's name as RDFS Property..";
+  skos:definition "A person's name as RDFS Property..";
   rdfs:range rdfs:string, rdfs:number;
   rdfs:domain :Person;
 .
