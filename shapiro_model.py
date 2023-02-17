@@ -2,8 +2,11 @@ from rdflib import Graph, URIRef, BNode
 from rdflib.plugins.sparql import prepareQuery
 from rdflib.plugin import PluginException
 from typing import Tuple, List
-from shapiro_util import NotFoundException, prune_iri
+from shapiro_util import NotFoundException, prune_iri, get_logger
 from urllib.parse import urlparse
+import logging
+
+log = get_logger("SHAPIRO_RENDER")
 
 class Subscriptable:
     
@@ -46,6 +49,7 @@ class SemanticModelElement(Subscriptable):
                 """)
 
     def __init__(self, iri:str, graph: Graph = None):
+        log.info("Initializing model for {}".format(iri))
         self.iri = iri
         self.graph = graph
         self.label, self.title, self.comment, self.description, self.definition = ( "", "", "", "", "" )
@@ -58,18 +62,22 @@ class SemanticModelElement(Subscriptable):
                     else:
                         try: 
                             self.graph = Graph().parse(iri)
-                        except PluginException:
+                        except PluginException as p:
+                            log.warn("Creating empty graph in response to {}".format(p))
                             self.graph = Graph() # some schema servers like FOAF don't act nice for term references
                 except Exception as x:
                     # happens when the overall ontology is exists, but any term contained does not resolve (e.g. if the IRIs are wrong)
                     msg = msg = "Cannot resolve the requested term in the existing ontology '{}' ({})".format(iri,x)
+                    log.error(msg)
                     if '#' in iri:
                         msg += " It looks like your IRI contains a URL fragment ('#') not supported by Shapiro."
                     raise NotFoundException(msg)
             self.label, self.title, self.comment, self.description, self.definition = self.get_label_and_descriptions()
             if self.label == "" and self.title == "":
+                log.warn("Empty title, label, description and comment from graph query. Setting label/title to default for {}".format(self.iri))
                 self.label = self.title = prune_iri(self.iri, True)
         else:
+            log.warn("Cannot create graph - setting to 'unnamed' 'n/a' for {}".format(self.iri))
             self.label = self.title = "unnamed"
             self.comment = self.description = self.definition = "n/a"
  
@@ -92,7 +100,6 @@ class SemanticModelElement(Subscriptable):
                     description = str(r.description)
                 if r.definition is not None:
                     definition = str(r.definition)
-        #return (label, title, comment, description, definition)
         return (label, title, comment, description, definition)
     
     def get_types(self) -> str:

@@ -1,4 +1,18 @@
 from urllib.parse import urlparse
+import colorlog
+import logging
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    '%(asctime)s  %(log_color)s%(levelname)-8s  %(name)-14s  %(reset)s%(message)s',
+    datefmt = "%Y-%m-%d %H:%M:%S"
+))
+
+def get_logger(name:str):
+    logger = colorlog.getLogger(name)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
 
 class BadSchemaException(Exception):
 

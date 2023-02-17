@@ -8,8 +8,10 @@ from liquid import FileSystemLoader
 from urllib.parse import urlparse
 from urllib.error import HTTPError
 from shapiro_model import RdfClass, RdfProperty, SemanticModel, SemanticModelElement, ShaclConstraint, ShaclProperty
-from shapiro_util import NotFoundException, prune_iri
+from shapiro_util import NotFoundException, prune_iri, get_logger
 import markdown as md
+
+log = get_logger("SHAPIRO_RENDER")
 
 def url(value:str) -> str:
     url = urlparse(value)
@@ -34,6 +36,7 @@ class HtmlRenderer:
         return self.env.get_template("render_page.html").render(url = base_url, content = content)
     
     def render_model(self, base_url:str, model_iri: str) -> str:
+        log.info("HTML rendering model at {}".format(model_iri), stack_info=True)
         s = SemanticModel(model_iri)
         class_list = s.get_classes()
         shape_list = s.get_node_shapes()
@@ -61,6 +64,7 @@ class HtmlRenderer:
         return self.render_page( base_url, content )
     
     def render_model_element( self, base_url:str, iri: str) -> str:
+        log.info("HTML rendering model element at {}".format(iri))
         s = SemanticModel(iri)
         content = ""
         for t in s.get_types_of_instance(iri):
@@ -73,10 +77,14 @@ class HtmlRenderer:
             elif t == s.SHACL_PROPERTY:
                 content += self.render_shacl_property(base_url, s)
         if content == "" or content is None:
-            raise NotFoundException("Cannot render HTML for {} (element not found, or type of element could not be determined)".format(iri))
+            msg = "Cannot render HTML for {} (element not found, or type of element could not be determined)".format(iri)
+            log.error(msg)
+            raise NotFoundException(msg)
+        log.info("HTML rendering full page for model element at {}".format(iri))
         return self.render_page( base_url, content )
     
     def render_class(self, base_url:str, model:SemanticModel) -> str:
+        log.info("HTML rendering class at {}".format(model.iri))
         for c in model.get_classes():
             if c.iri == model.iri:
                 prop_types = {}
@@ -98,6 +106,7 @@ class HtmlRenderer:
                 )
 
     def render_property(self, base_url:str, model:SemanticModel) -> str:
+        log.info("HTML rendering property at {}".format(model.iri))
         for p in model.get_properties():
             if p.iri == model.iri:
                 shacl_props = p.get_shacl_properties()
@@ -122,6 +131,7 @@ class HtmlRenderer:
                 )
 
     def render_nodeshape(self, base_url:str, model:SemanticModel) -> str:
+        log.info("HTML rendering nodeshape at {}".format(model.iri))
         for n in model.get_node_shapes():
             if n.iri == model.iri:
                 shacl_props = n.get_shacl_properties()
@@ -144,6 +154,7 @@ class HtmlRenderer:
                 )
 
     def render_shacl_property(self, base_url:str, model:SemanticModel) -> str:
+        log.info("HTML rendering SHACL property at {}".format(model.iri))
         shacl_props = model.get_shacl_properties()
         for sp in shacl_props:
             if sp.iri == model.iri:

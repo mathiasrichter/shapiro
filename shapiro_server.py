@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import colorlog
 import uvicorn
 import asyncio
 import argparse
@@ -25,7 +26,7 @@ from liquid import Mode
 from liquid import StrictUndefined
 from liquid import FileSystemLoader
 from shapiro_render import HtmlRenderer
-from shapiro_util import BadSchemaException, NotFoundException
+from shapiro_util import BadSchemaException, NotFoundException, get_logger
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -53,7 +54,7 @@ EKG = None
 
 HTML_RENDERER = HtmlRenderer()
 
-log = logging.getLogger("uvicorn")
+log = get_logger("SHAPIRO_SERVER")
 
 app = FastAPI()
 
@@ -698,6 +699,7 @@ def get_ranked_mime_types(accept_header: str):
     weights = []
     q_buckets = {}
     for mime_type in mime_types:
+        mime_type = mime_type.strip()
         if mime_type.split(";")[0] == mime_type:
             # no quality factor
             if 1.0 not in weights:
