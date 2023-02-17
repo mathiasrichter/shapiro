@@ -119,8 +119,8 @@ def test_schema_fulltext_search():
     response = client.get("/search/?query=real")
     hits = response.json()
     assert hits["schemas"] is not None
-    assert len(hits["schemas"]) == 1
-    assert hits["schemas"][0]["schema_path"] == "com/example/org/person"
+    assert len(hits["schemas"]) == 3
+    assert hits["schemas"][0]["schema_path"].startswith("com/example/org/person")
     assert response.status_code == 200
     response = client.get("/search/?query=")
     assert response.status_code == 200
@@ -170,6 +170,18 @@ def test_redirect_to_welcome_page():
 def test_render_model():
     mime_in = "text/html"
     response = client.get("/com/example/org/person", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+def test_render_model_with_ontology_url_fragment():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person_1", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+def test_render_model_with_ontology_url_slash():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person_2", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
 

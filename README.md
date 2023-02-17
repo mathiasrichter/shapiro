@@ -1,6 +1,20 @@
 # <img src="static/shapiro.png" alt="Shapiro" width="8%" style="margin-bottom:-15px;margin-right:15px"/>  Shapiro
 
-## What is Shapiro
+- [  Shapiro](#--shapiro)
+  - [What is Shapiro](#what-is-shapiro)
+  - [Motivation - Model as Code](#motivation---model-as-code)
+  - [Serving Schemas](#serving-schemas)
+    - [Content Negotiation](#content-negotiation)
+    - [Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions](#markdown-in-rdfs-commentsskos-definitionsdct-descriptions)
+    - [No URL fragments](#no-url-fragments)
+  - [Hierarchical Namespaces](#hierarchical-namespaces)
+  - [Querying the combined Graph of all Schemas served by Shapiro](#querying-the-combined-graph-of-all-schemas-served-by-shapiro)
+  - [Validation with Shapiro](#validation-with-shapiro)
+  - [Searching Shapiro](#searching-shapiro)
+  - [Shapiro UI](#shapiro-ui)
+  - [Installing and running Shapiro](#installing-and-running-shapiro)
+
+## What is Shapiro                                                      
 Shapiro is a simple ontology/vocabulary server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies/vocabularies.
 
 ## Motivation - Model as Code

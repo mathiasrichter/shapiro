@@ -1,4 +1,4 @@
-@prefix : <http://127.0.0.1:8000/com/example/org/person/> .
+@prefix : <http://127.0.0.1:8000/com/example/org/person_2/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -8,9 +8,8 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix adms: <http://www.w3.org/ns/adms#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
-<http://127.0.0.1:8000/com/example/org/person> a owl:Ontology ;
+<http://127.0.0.1:8000/com/example/org/person_2/> a owl:Ontology ;
   adms:status <http://purl.org/adms/status/UnderDevelopment> ;
   dct:format <http://publications.europa.eu/resource/authority/file-type/RDF_TURTLE> ;
   dct:creator "Mathias.richter@gmail.com" ;
@@ -33,7 +32,7 @@
   - fictional: the person exists/has existed only in fictional works (novels, movies, etc.), never in real live.
   - real: the person exists/has existed in reality.
                   """ ;
-    rdfs:subClassOf schema:Thing, foaf:Person ;
+    rdfs:subClassOf schema:Thing
 .
 
 :PersonOtherName a rdf:Property ;

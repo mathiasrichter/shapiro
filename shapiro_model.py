@@ -1,5 +1,6 @@
 from rdflib import Graph, URIRef, BNode
 from rdflib.plugins.sparql import prepareQuery
+from rdflib.plugin import PluginException
 from typing import Tuple, List
 from shapiro_util import NotFoundException, prune_iri
 from urllib.parse import urlparse
@@ -54,8 +55,11 @@ class SemanticModelElement(Subscriptable):
                     if "schema.org" in iri.lower():
                         # rdflib and schema.org both need a little more love - see https://github.com/RDFLib/rdflib-jsonld/issues/42
                         self.graph = Graph().parse("http://schema.org", format='json-ld')
-                    else:  
-                        self.graph = Graph().parse(iri)
+                    else:
+                        try: 
+                            self.graph = Graph().parse(iri)
+                        except PluginException:
+                            self.graph = Graph() # some schema servers like FOAF don't act nice for term references
                 except Exception as x:
                     # happens when the overall ontology is exists, but any term contained does not resolve (e.g. if the IRIs are wrong)
                     msg = msg = "Cannot resolve the requested term in the existing ontology '{}' ({})".format(iri,x)
@@ -91,15 +95,17 @@ class SemanticModelElement(Subscriptable):
         #return (label, title, comment, description, definition)
         return (label, title, comment, description, definition)
     
-    def get_type(self) -> str:
+    def get_types(self) -> str:
         if urlparse(self.iri).scheme == '': #  if this is a blank node
             ref = BNode(self.iri)
         else:
             ref = URIRef(self.iri)
         result = self.graph.query(self.TYPE_QUERY, initBindings={'instance':ref})
+        types = []
         for r in result:
-            return str(r.type)
-        return "n/a"        
+            types.append(str(r.type))
+        types.sort(key=lambda c: c)
+        return types
 
 class RdfProperty(SemanticModelElement):
     
@@ -399,18 +405,27 @@ class SemanticModel(SemanticModelElement):
     def __init__(self, iri:str):
         super().__init__(iri)
         
-    def get_model_details(self) -> dict:
-        result = self.graph.query(self.MODEL_DETAILS_QUERY, initBindings={'model':URIRef(self.iri)})
+    def get_model_details_for_iri(self, iri) -> dict:
+        result = self.graph.query(self.MODEL_DETAILS_QUERY, initBindings={'model':URIRef(iri)})
         details = {}
         for r in result:
             details[str(r.property)] = str(r.value)
         return details
+        
+    def get_model_details(self) -> dict:
+        result = self.get_model_details_for_iri(self.iri)
+        if result == {} and not ( self.iri.endswith('/') or self.iri.endswith('#') ):
+           result = self.get_model_details_for_iri(self.iri+"/")
+           if result == {}:
+               result = self.get_model_details_for_iri(self.iri+"#")
+        return result
     
     def get_types_of_instance(self, instance_iri:str) -> str:
         result = self.graph.query(self.TYPE_QUERY, initBindings={'instance':URIRef(instance_iri)})
         types = []
         for r in result:
             types.append(str(r.type))
+        types.sort(key=lambda c: c)
         return types   
         
     def get_instances_of_type(self, type_iri:str, type_class:type) -> list:

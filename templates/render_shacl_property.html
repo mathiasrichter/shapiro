@@ -1,6 +1,6 @@
 <section class="page-section pt-4 pb-4">
     <div class="container">
-        <h2 class="mb-3">{{property.label}}</h2>
+        <h2 class="mb-3"><span class="badge rounded-pill bg-primary">Shacl Property</span> {{property.label}}</h2>
         <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
             <tr>
                 <td class="fw-bolder">IRI</td>
@@ -8,7 +8,11 @@
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
-                <td><a href="{{type}}">{{type | prune}}</a></td>
+                <td>
+                    {% for t in types %}
+                        <a href="{{t}}">{{t | prune}}</a>
+                    {% endfor %}
+                </td>
             </tr>
             <tr>
                 <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>

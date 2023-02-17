@@ -27,7 +27,9 @@ def prefix(iri:str, name:str) -> str:
         'http://www.w3.org/ns/org#': 'org:',    
         'http://www.w3.org/2006/time#': 'time:',
         'http://www.w3.org/TR/vocab-dcat-2/#': 'dcat:',
-        'http://purl.org/adms/status/': 'adms:'
+        'https://www.w3.org/ns/dcat#': 'dcat:',
+        'http://purl.org/adms/status/': 'adms:',
+        'http://xmlns.com/foaf/0.1/': 'foaf:'
     }
     for k in known.keys():
         if iri.lower().startswith(k.lower()):
@@ -47,7 +49,7 @@ def prune_iri(iri:str, name_only:bool = False) -> str:
         result = url.fragment
     if name_only is False:
         result = prefix(iri, result)
-    if result.__contains__(':'):
+    if result.__contains__(':') or len(result)==0:
         return result
     else:
         return result[0].upper() + result[1:len(result)]
