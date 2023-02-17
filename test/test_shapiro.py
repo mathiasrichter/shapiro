@@ -241,7 +241,7 @@ def test_get_non_existing_schema_element_html():
 
 def test_404_in_schema_element_html():
     mime_in = "text/html"
-    response = client.get("/person", headers={"accept": mime_in})
+    response = client.get("/person/foo", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 404
 

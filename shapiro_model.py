@@ -55,23 +55,7 @@ class SemanticModelElement(Subscriptable):
         self.label, self.title, self.comment, self.description, self.definition = ( "", "", "", "", "" )
         if urlparse(iri).scheme != '': #  if this is not a blank node
             if graph is None:
-                try:
-                    if "schema.org" in iri.lower():
-                        # rdflib and schema.org both need a little more love - see https://github.com/RDFLib/rdflib-jsonld/issues/42
-                        self.graph = Graph().parse("http://schema.org", format='json-ld')
-                    else:
-                        try: 
-                            self.graph = Graph().parse(iri)
-                        except PluginException as p:
-                            log.warn("Creating empty graph in response to {}".format(p))
-                            self.graph = Graph() # some schema servers like FOAF don't act nice for term references
-                except Exception as x:
-                    # happens when the overall ontology is exists, but any term contained does not resolve (e.g. if the IRIs are wrong)
-                    msg = msg = "Cannot resolve the requested term in the existing ontology '{}' ({})".format(iri,x)
-                    log.error(msg)
-                    if '#' in iri:
-                        msg += " It looks like your IRI contains a URL fragment ('#') not supported by Shapiro."
-                    raise NotFoundException(msg)
+                self.graph = Graph().parse(iri)
             self.label, self.title, self.comment, self.description, self.definition = self.get_label_and_descriptions()
             if self.label == "" and self.title == "":
                 log.warn("Empty title, label, description and comment from graph query. Setting label/title to default for {}".format(self.iri))
@@ -103,10 +87,7 @@ class SemanticModelElement(Subscriptable):
         return (label, title, comment, description, definition)
     
     def get_types(self) -> str:
-        if urlparse(self.iri).scheme == '': #  if this is a blank node
-            ref = BNode(self.iri)
-        else:
-            ref = URIRef(self.iri)
+        ref = URIRef(self.iri)
         result = self.graph.query(self.TYPE_QUERY, initBindings={'instance':ref})
         types = []
         for r in result:
@@ -179,8 +160,8 @@ class RdfProperty(SemanticModelElement):
             }
                 """)
 
-    def __init__(self, iri:str):
-        super().__init__(iri)
+    def __init__(self, iri:str, graph:Graph):
+        super().__init__(iri, graph)
         
     def query(self, query:str) -> List[str]:
         qresult = self.graph.query(query, initBindings={'property': URIRef(self.iri)})
@@ -227,8 +208,8 @@ class NodeShape(SemanticModelElement):
             }
             """)
     
-    def __init__(self, iri:str):
-        super().__init__(iri)
+    def __init__(self, iri:str, graph:Graph):
+        super().__init__(iri, graph)
         
     def get_shacl_properties(self) -> List['ShaclProperty']:
         result = self.graph.query(self.SHACL_PROP_QUERY, initBindings={'shape': URIRef(self.iri)})
@@ -242,7 +223,7 @@ class NodeShape(SemanticModelElement):
         result = self.graph.query(self.CLASS_QUERY, initBindings={'shape': URIRef(self.iri)})
         classes = []
         for r in result:
-            classes.append(RdfClass(str(r.target)))
+            classes.append(RdfClass(str(r.target), self.graph))
         classes.sort(key=lambda p:p.label)
         return classes
        
@@ -285,14 +266,14 @@ class RdfClass(SemanticModelElement):
                 }
                 """)
 
-    def __init__(self, iri:str):
-        super().__init__(iri)
+    def __init__(self, iri:str, graph:Graph):
+        super().__init__(iri, graph)
 
     def get_properties(self) -> List[RdfProperty]:
         result = self.graph.query(self.PROPERTY_QUERY, initBindings={'class': URIRef(self.iri)})
         props = []
         for r in result:
-            props.append(RdfProperty(str(r.property)))
+            props.append(RdfProperty(str(r.property), self.graph))
         props.sort(key=lambda c: c.label)
         return props
         
@@ -300,7 +281,7 @@ class RdfClass(SemanticModelElement):
         result = self.graph.query(self.SUPERCLASSES_QUERY, initBindings={'subclass': URIRef(self.iri)})
         superclasses = []
         for r in result:
-            superclasses.append(RdfClass(str(r.superclass)))
+            superclasses.append(RdfClass(str(r.superclass), self.graph))
         superclasses.sort(key=lambda c: c.label)
         return superclasses
     
@@ -308,7 +289,7 @@ class RdfClass(SemanticModelElement):
         result = self.graph.query(self.SHAPE_QUERY, initBindings={'class': URIRef(self.iri)})
         shapes = []
         for r in result:
-            shapes.append(NodeShape(str(r.shape)))
+            shapes.append(NodeShape(str(r.shape), self.graph))
         shapes.sort(key=lambda c: c.label)
         return shapes        
     
@@ -363,7 +344,7 @@ class ShaclProperty(SemanticModelElement):
         result = self.graph.query(self.SHAPE_QUERY, initBindings={'property': prop})
         shapes = []
         for r in result:
-            shapes.append(NodeShape(str(r.shape)))
+            shapes.append(NodeShape(str(r.shape), self.graph))
         shapes.sort(key=lambda s:s.label)
         return shapes
     
@@ -436,15 +417,11 @@ class SemanticModel(SemanticModelElement):
         return types   
         
     def get_instances_of_type(self, type_iri:str, type_class:type) -> list:
-        type_ref = None
-        if urlparse(type_iri).scheme == '': # if there's no scheme it must be a plain node, not a uri reference
-            type_ref = BNode(type_iri)
-        else:
-            type_ref = URIRef(type_iri)
+        type_ref = URIRef(type_iri)
         result = self.graph.query(self.TYPE_QUERY, initBindings={'type':type_ref})
         instances = []
         for r in result:
-            instances.append(type_class(str(r.instance)))
+            instances.append(type_class(str(r.instance), self.graph))
         return instances
     
     def get_classes(self) -> List[RdfClass]:
@@ -453,7 +430,7 @@ class SemanticModel(SemanticModelElement):
         result = self.graph.query(self.CLASS_QUERY)
         classes = []
         for r in result:
-            classes.append(RdfClass(str(r.instance)))
+            classes.append(RdfClass(str(r.instance), self.graph))
         classes.sort(key=lambda c: c.label)
         return classes
    

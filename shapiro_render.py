@@ -36,7 +36,7 @@ class HtmlRenderer:
         return self.env.get_template("render_page.html").render(url = base_url, content = content)
     
     def render_model(self, base_url:str, model_iri: str) -> str:
-        log.info("HTML rendering model at {}".format(model_iri), stack_info=True)
+        log.info("HTML rendering model at {}".format(model_iri))
         s = SemanticModel(model_iri)
         class_list = s.get_classes()
         shape_list = s.get_node_shapes()
