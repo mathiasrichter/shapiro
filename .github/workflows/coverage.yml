@@ -1,0 +1,33 @@
+name: 'Coverage'
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  unit_tests_3_10:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip' 
+    - run: pip install --upgrade pip
+    - run: pip install -r requirements.txt
+    - run: pip install coverage-badge
+    - run: pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov-report=xml
+    - run: coverage-badge -o shapiro_coverage_badge.svg
+    - name: Upload Coverage Badge
+      uses: actions/upload-artifact@v3
+      with:
+        name: shapiro_coverage_badge.svg
+        path: shapiro_coverage_badge.svg
