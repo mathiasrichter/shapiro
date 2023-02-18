@@ -1,4 +1,4 @@
-![Unit Tests Python 3.8](https://github.com/mathiasrichter/shapiro/workflows/unit_tests_python_3_8/badge.svg)
+![Unit Tests Python 3.8](https://github.com/mathiasrichter/shapiro/actions/workflows/unit_tests_python_3_8.yml/badge.svg)
 ![Unit Tests Python 3.9](https://github.com/mathiasrichter/shapiro/workflows/unit_tests_python_3_9/badge.svg)
 ![Unit Tests Python 3.10](https://github.com/mathiasrichter/shapiro/workflows/unit_tests_python_3_10/badge.svg)
 
