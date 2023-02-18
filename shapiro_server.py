@@ -64,6 +64,7 @@ env = Environment(
     loader=FileSystemLoader("templates/"),
 )
 
+
 class SchemaHousekeeping(Thread):
     """
     Separate thread that does housekeeping on schemas. This is required
@@ -108,8 +109,8 @@ class SchemaHousekeeping(Thread):
             schemas (List[str]): List of schema files to perform housekeeping on.
         """
         pass
-    
-    
+
+
 class EKGHouseKeeping(SchemaHousekeeping):
     """
     Build/rebuild the Knowledge Graph of all schemas, so it
@@ -119,7 +120,7 @@ class EKGHouseKeeping(SchemaHousekeeping):
     def __init__(self, sleep_seconds: float = 60.0 * 10.0):
         super().__init__(sleep_seconds)
 
-    def perform_housekeeping_on(self, schemas: List[str]):    
+    def perform_housekeeping_on(self, schemas: List[str]):
         """
         Build/rebuild the Knowledge Graph of all schemas, so it
         can be queried in its entirety using SPARQL.
@@ -128,16 +129,25 @@ class EKGHouseKeeping(SchemaHousekeeping):
         if EKG is None or len(schemas) > 0:
             log.info("Housekeeping: Rebuilding knowledge graph.")
             EKG = Graph()
-            walk_schemas(CONTENT_DIR, self.add_schema)            
-            
+            walk_schemas(CONTENT_DIR, self.add_schema)
+
     def add_schema(self, path: str, full_name: str, schema_path: str, suffix: str):
         if full_name not in BAD_SCHEMAS:
             try:
                 with open(full_name, "r") as f:
                     EKG.parse(file=f)
-                log.info("Housekeeping: Ingested '{}' into knowledge graph.".format(full_name))
-            except Exception  as x:
-                log.error("Could not ingest '{}' into knowledge graph: {}".format(schema_path, x))        
+                log.info(
+                    "Housekeeping: Ingested '{}' into knowledge graph.".format(
+                        full_name
+                    )
+                )
+            except Exception as x:
+                log.error(
+                    "Could not ingest '{}' into knowledge graph: {}".format(
+                        schema_path, x
+                    )
+                )
+
 
 class BadSchemaHousekeeping(SchemaHousekeeping):
     """
@@ -159,7 +169,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                 g = Graph().parse(full_name)
                 found = False
                 schema_path = get_schema_path(full_name)
-                for (s, p, o) in g:
+                for s, p, o in g:
                     # want to be sure that the schema refers back to this server
                     # at least once in an RDF-triple
                     if found is False:
@@ -192,7 +202,7 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
     Regularly index new or changed schemas in the search index for providing full text search in schemas.
     """
 
-    def __init__(self, index_dir:str = INDEX_DIR, sleep_seconds: float = 60.0 * 30.0):
+    def __init__(self, index_dir: str = INDEX_DIR, sleep_seconds: float = 60.0 * 30.0):
         super().__init__(sleep_seconds)
         schema = Schema(
             full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer())
@@ -335,13 +345,15 @@ async def search(query: str = None, request: Request = None):
         log.error("Could not perform search: {}".format(x))
         return Response(content="Could not perform search.", status_code=500)
 
+
 @app.get("/query/", status_code=200)
-def query_page(request:Request):
+def query_page(request: Request):
     global BASE_URL
     if BASE_URL is None:
         BASE_URL = str(request.base_url)
     query_page = env.get_template("query.html").render(url=BASE_URL)
     return HTMLResponse(content=query_page)
+
 
 @app.post("/query/", status_code=200)
 async def query(request: Request):
@@ -351,30 +363,33 @@ async def query(request: Request):
     """
     query = await request.body()
     try:
-        result = EKG.query(query)      
-        json ='['
+        result = EKG.query(query)
+        json = "["
         for r in result:
-            if json[len(json)-1] == '}':
+            if json[len(json) - 1] == "}":
                 json += ","
-            json += '{'
+            json += "{"
             for l in r.labels:
-                if json[len(json)-1] == '"':
+                if json[len(json) - 1] == '"':
                     json += ","
-                json += '"'+l+'":'+'"'+str(r[l])+'"'
-            json += '}'
-        json += ']'
-        return JSONResponse(
-            content=json, status_code=status.HTTP_200_OK
-        )        
+                json += '"' + l + '":' + '"' + str(r[l]) + '"'
+            json += "}"
+        json += "]"
+        return JSONResponse(content=json, status_code=status.HTTP_200_OK)
     except Exception as x:
         log.error("Could not execute query: {}".format(x))
         return JSONResponse(
-            content={"err_msg": str(x)}, media_type="application/json", status_code=status.HTTP_406_NOT_ACCEPTABLE
+            content={"err_msg": str(x)},
+            media_type="application/json",
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
         )
+
 
 # usage of ":path"as per https://www.starlette.io/routing/#path-parameters
 @app.get("/{schema_path:path}", status_code=200)
-def get_schema(schema_path: str = None, accept_mime:str = None, request:Request = None):
+def get_schema(
+    schema_path: str = None, accept_mime: str = None, request: Request = None
+):
     """
     Serve the ontology/schema/model under the specified schema path in the mime type
     specified in the accept header.
@@ -384,7 +399,7 @@ def get_schema(schema_path: str = None, accept_mime:str = None, request:Request 
     if BASE_URL is None and request is not None:
         BASE_URL = str(request.base_url)
     accept_header = accept_mime
-    if (accept_header == "" or accept_header is None):
+    if accept_header == "" or accept_header is None:
         for k in request.headers.keys():
             if k.lower() == "accept":
                 accept_header = request.headers.get("accept", "")
@@ -413,12 +428,17 @@ def get_schema(schema_path: str = None, accept_mime:str = None, request:Request 
             content={"err_msg": err_msg}, status_code=status.HTTP_406_NOT_ACCEPTABLE
         )
     except NotFoundException as x:
-            if MIME_HTML.lower() in accept_header.lower():
-                return Response(env.get_template("error.html").render(url=BASE_URL, msg=x.content), media_type="text/html", status_code = status.HTTP_404_NOT_FOUND)
-            else:
-                return JSONResponse(
-                    content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
-                )
+        if MIME_HTML.lower() in accept_header.lower():
+            return Response(
+                env.get_template("error.html").render(url=BASE_URL, msg=x.content),
+                media_type="text/html",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        else:
+            return JSONResponse(
+                content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
+            )
+
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
@@ -522,7 +542,7 @@ async def validate(schema_path: str, request: Request):
         log.error(err_msg)
         return JSONResponse(
             content={"err_msg": err_msg},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
 
@@ -540,7 +560,7 @@ async def validate_infer_model(request: Request, data_graph: Graph, data_format:
     # we do this by extracting the schema prefixes and validating
     # the data against every prefix
     schema_graphs = []
-    for (s, p, o) in data_graph:
+    for s, p, o in data_graph:
         iri = extract_base(str(s))
         if iri is not None and iri not in schema_graphs:
             schema_graphs.append(iri)
@@ -605,7 +625,7 @@ def resolve(accept_header: str, path: str):
     return result
 
 
-def convert(path:str, filename: str, content: str, mime_type: str):
+def convert(path: str, filename: str, content: str, mime_type: str):
     """
     Convert the content (from the specified iri-path and filename) to the format
     according to the specified mime type.
@@ -613,10 +633,18 @@ def convert(path:str, filename: str, content: str, mime_type: str):
     if filename in BAD_SCHEMAS:
         raise BadSchemaException()
     if mime_type == MIME_HTML:
-        if filename[0:filename.rfind('.')].endswith(path):
-            return {"content": HTML_RENDERER.render_model(BASE_URL, BASE_URL + path) , "mime_type": mime_type}
+        if filename[0 : filename.rfind(".")].endswith(path):
+            return {
+                "content": HTML_RENDERER.render_model(BASE_URL, BASE_URL + path),
+                "mime_type": mime_type,
+            }
         else:
-            return {"content": HTML_RENDERER.render_model_element(BASE_URL, BASE_URL + path) , "mime_type": mime_type}            
+            return {
+                "content": HTML_RENDERER.render_model_element(
+                    BASE_URL, BASE_URL + path
+                ),
+                "mime_type": mime_type,
+            }
     if mime_type == MIME_JSONLD:
         if filename.endswith(SUFFIX_JSONLD):
             log.info(
@@ -708,9 +736,9 @@ def get_ranked_mime_types(accept_header: str):
                 q_buckets["1.0"] = []
             q_buckets["1.0"].append(mime_type)
         else:
-            for k in mime_type.split(";"): # there is not only q factors
-                key = k.split("=")[0]              
-                if key.lower() == 'q': # only process q-weights
+            for k in mime_type.split(";"):  # there is not only q factors
+                key = k.split("=")[0]
+                if key.lower() == "q":  # only process q-weights
                     q = k.split("=")[1]
                     q = float(q)
                     if q not in weights:
@@ -719,7 +747,7 @@ def get_ranked_mime_types(accept_header: str):
                     if q not in q_buckets.keys():
                         q_buckets[q] = []
                     q_buckets[q].append(mime_type.split(";")[0])
-                    
+
     result = []
     weights.sort(reverse=True)
     for w in weights:
