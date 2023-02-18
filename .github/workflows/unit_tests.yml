@@ -21,6 +21,7 @@ jobs:
       with:
         python-version: '3.8'
         cache: 'pip' 
+    - run: pip install --upgrade pip
     - run: pip install -r requiremenmts.txt
     - run: pytest
 
@@ -32,6 +33,7 @@ jobs:
       with:
         python-version: '3.9'
         cache: 'pip' 
+    - run: pip install --upgrade pip
     - run: pip install -r requiremenmts.txt
     - run: pytest    
 
@@ -43,5 +45,6 @@ jobs:
       with:
         python-version: '3.10'
         cache: 'pip' 
+    - run: pip install --upgrade pip
     - run: pip install -r requiremenmts.txt
     - run: pytest    
