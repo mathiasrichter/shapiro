@@ -1,4 +1,4 @@
-name: unit_tests_python_3_9
+name: Python-3.9
 
 # Controls when the workflow will run
 on:
