@@ -1,4 +1,4 @@
-name: Unit Tests Python 3.10
+name: unit_tests_python_3_10
 
 # Controls when the workflow will run
 on:
