@@ -1,6 +1,6 @@
-![Unit Tests Python 3.8](https://github.com/mathiasrichter/shapiro/workflows/Python-3.8/badge.svg)
-![Unit Tests Python 3.9](https://github.com/mathiasrichter/shapiro/workflows/Python-3.9/badge.svg)
-![Unit Tests Python 3.10](https://github.com/mathiasrichter/shapiro/workflows/Python-3.10/badge.svg)
+![Unit Tests Python 3.8 ](https://github.com/mathiasrichter/shapiro/actions/workflows/tests_python_3_8.yml/badge.svg)
+![Unit Tests Python 3.9 ](https://github.com/mathiasrichter/shapiro/actions/workflows/tests_python_3_9.yml/badge.svg)
+![Unit Tests Python 3.10](https://github.com/mathiasrichter/shapiro/actions/workflows/tests_python_3_10.yml/badge.svg)
 
 # <img src="static/shapiro.png" alt="Shapiro" width="8%" style="margin-bottom:-15px;margin-right:15px"/>  Shapiro
 
