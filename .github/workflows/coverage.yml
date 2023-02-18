@@ -23,11 +23,6 @@ jobs:
         cache: 'pip' 
     - run: pip install --upgrade pip
     - run: pip install -r requirements.txt
-    - run: pip install coverage-badge
     - run: pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov-report=xml
-    - run: coverage-badge -o shapiro_coverage_badge.svg
-    - name: Upload Coverage Badge
-      uses: actions/upload-artifact@v3
-      with:
-        name: shapiro_coverage_badge.svg
-        path: shapiro_coverage_badge.svg
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
