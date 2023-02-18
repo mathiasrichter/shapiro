@@ -22,7 +22,7 @@ jobs:
         python-version: '3.8'
         cache: 'pip' 
     - run: pip install --upgrade pip
-    - run: pip install -r requiremenmts.txt
+    - run: pip install -r requirements.txt
     - run: pytest
 
   unit_tests_3_9:
@@ -34,7 +34,7 @@ jobs:
         python-version: '3.9'
         cache: 'pip' 
     - run: pip install --upgrade pip
-    - run: pip install -r requiremenmts.txt
+    - run: pip install -r requirements.txt
     - run: pytest    
 
   unit_tests_3_10:
@@ -46,5 +46,5 @@ jobs:
         python-version: '3.10'
         cache: 'pip' 
     - run: pip install --upgrade pip
-    - run: pip install -r requiremenmts.txt
+    - run: pip install -r requirements.txt
     - run: pytest    
