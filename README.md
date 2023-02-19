@@ -2,7 +2,8 @@
 ![Unit Tests Python 3.9 ](https://github.com/mathiasrichter/shapiro/actions/workflows/tests_python_3_9.yml/badge.svg)
 ![Unit Tests Python 3.10](https://github.com/mathiasrichter/shapiro/actions/workflows/tests_python_3_10.yml/badge.svg)
 ![Coverage](https://img.shields.io/codecov/c/github/mathiasrichter/shapiro?label=Coverage&style=plastic)
-
+![Last Commit](https://img.shields.io/github/last-commit/mathiasrichter/shapiro?label=Last%20Commit&style=plastic)
+![Release Date](https://img.shields.io/github/release-date/mathiasrichter/shapiro?label=Release%20Date&style=plastic)
 
 # <img src="static/shapiro.png" alt="Shapiro" width="8%" style="margin-bottom:-15px;margin-right:15px"/>  Shapiro
 
