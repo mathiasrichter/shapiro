@@ -170,7 +170,9 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                 found = False
                 schema_path = get_schema_path(full_name)
                 if schema_path.startswith("/"):
-                    path = BASE_URL + schema_path[1:len(schema_path)] # skip leading '/' of schema path
+                    path = (
+                        BASE_URL + schema_path[1 : len(schema_path)]
+                    )  # skip leading '/' of schema path
                 else:
                     path = BASE_URL + schema_path
                 for s, p, o in g:
@@ -186,7 +188,9 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                         break
                 if found is False:
                     raise Exception(
-                        "Schema '{}' doesn't seem to have any origin on this server.".format(path)
+                        "Schema '{}' doesn't seem to have any origin on this server.".format(
+                            path
+                        )
                     )
                 if full_name in BAD_SCHEMAS:
                     BAD_SCHEMAS.remove(
@@ -409,13 +413,20 @@ def get_schema(
             raise NotFoundException("Could not find schema {}".format(schema_path))
         return Response(content=result["content"], media_type=result["mime_type"])
     except BadSchemaException:
-        err_msg = "Schema '{}' is not syntactically correct or has other issues and cannot be served.".format(
+        err_msg = "Schema '{}' is not syntactically correct, does not have its origin on this server or has other issues and cannot be served.".format(
             schema_path
         )
         log.error(err_msg)
-        return JSONResponse(
-            content={"err_msg": err_msg}, status_code=status.HTTP_406_NOT_ACCEPTABLE
-        )
+        if MIME_HTML.lower() in accept_header.lower():
+            return Response(
+                env.get_template("error.html").render(url=BASE_URL, msg=err_msg),
+                media_type="text/html",
+                status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            )
+        else:
+            return JSONResponse(
+                content={"err_msg": err_msg}, status_code=status.HTTP_406_NOT_ACCEPTABLE
+            )
     except NotFoundException as x:
         if MIME_HTML.lower() in accept_header.lower():
             return Response(
@@ -870,7 +881,8 @@ def get_args(argv=[]):
     parser.add_argument("--ssl_ca_certs", help="CA certificates file")
     return parser.parse_args(argv)
 
-def build_base_url(host:str, port:int, is_ssl:bool):
+
+def build_base_url(host: str, port: int, is_ssl: bool):
     # no trailing '/' please
     global BASE_URL
     if is_ssl == True:
@@ -881,6 +893,7 @@ def build_base_url(host:str, port:int, is_ssl:bool):
     if port is not None:
         BASE_URL += ":" + str(port)
     BASE_URL += "/"
+
 
 def get_server(
     host: str,
@@ -904,7 +917,15 @@ def get_server(
     IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
-    build_base_url(host, port, (ssl_keyfile is not None or ssl_certfile is not None or ssl_ca_certs is not None))
+    build_base_url(
+        host,
+        port,
+        (
+            ssl_keyfile is not None
+            or ssl_certfile is not None
+            or ssl_ca_certs is not None
+        ),
+    )
     config = uvicorn.Config(
         app,
         host=host,
