@@ -169,20 +169,24 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                 g = Graph().parse(full_name)
                 found = False
                 schema_path = get_schema_path(full_name)
+                if schema_path.startswith("/"):
+                    path = BASE_URL + schema_path[1:len(schema_path)] # skip leading '/' of schema path
+                else:
+                    path = BASE_URL + schema_path
                 for s, p, o in g:
                     # want to be sure that the schema refers back to this server
                     # at least once in an RDF-triple
                     if found is False:
                         found = (
-                            str(s).find(schema_path) > -1
-                            or str(p).find(schema_path) > -1
-                            or str(o).find(schema_path) > -1
+                            str(s).find(path) > -1
+                            or str(p).find(path) > -1
+                            or str(o).find(path) > -1
                         )
                     if found is True:
                         break
                 if found is False:
                     raise Exception(
-                        "Schema '{}' doesn't seem to have any origin on this server."
+                        "Schema '{}' doesn't seem to have any origin on this server.".format(path)
                     )
                 if full_name in BAD_SCHEMAS:
                     BAD_SCHEMAS.remove(
@@ -280,9 +284,6 @@ async def welcome(request: Request):
     """
     Render a welcome page.
     """
-    global BASE_URL
-    if BASE_URL is None:
-        BASE_URL = str(request.base_url)
     welcome_page = env.get_template("main.html").render(url=BASE_URL)
     return HTMLResponse(content=welcome_page)
 
@@ -293,9 +294,6 @@ async def get_schema_list(request: Request):
     Return a list of the schemas hosted in this repository as JSON-data.
     """
     log.info("Retrieving list of schemas")
-    global BASE_URL
-    if BASE_URL is None:
-        BASE_URL = str(request.base_url)
     result = walk_schemas(
         CONTENT_DIR,
         lambda path, full_name, schema_path, suffix: {
@@ -315,9 +313,6 @@ async def search(query: str = None, request: Request = None):
     Use the Whoosh full text search index for schemas to find the text specified in the query in the schema files
     served by this server. Returns hits in order of relevance.
     """
-    global BASE_URL
-    if BASE_URL is None and request is not None:
-        BASE_URL = str(request.base_url)
     if query is None or query == "":
         log.info("No search query specified, returning full schema list.")
         return await get_schema_list(request)
@@ -348,9 +343,6 @@ async def search(query: str = None, request: Request = None):
 
 @app.get("/query/", status_code=200)
 def query_page(request: Request):
-    global BASE_URL
-    if BASE_URL is None:
-        BASE_URL = str(request.base_url)
     query_page = env.get_template("query.html").render(url=BASE_URL)
     return HTMLResponse(content=query_page)
 
@@ -395,9 +387,6 @@ def get_schema(
     specified in the accept header.
     Currently supported mime types are 'application/ld+json', 'text/turtle'.
     """
-    global BASE_URL
-    if BASE_URL is None and request is not None:
-        BASE_URL = str(request.base_url)
     accept_header = accept_mime
     if accept_header == "" or accept_header is None:
         for k in request.headers.keys():
@@ -881,6 +870,17 @@ def get_args(argv=[]):
     parser.add_argument("--ssl_ca_certs", help="CA certificates file")
     return parser.parse_args(argv)
 
+def build_base_url(host:str, port:int, is_ssl:bool):
+    # no trailing '/' please
+    global BASE_URL
+    if is_ssl == True:
+        BASE_URL = "https://"
+    else:
+        BASE_URL = "http://"
+    BASE_URL += host
+    if port is not None:
+        BASE_URL += ":" + str(port)
+    BASE_URL += "/"
 
 def get_server(
     host: str,
@@ -904,6 +904,7 @@ def get_server(
     IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
+    build_base_url(host, port, (ssl_keyfile is not None or ssl_certfile is not None or ssl_ca_certs is not None))
     config = uvicorn.Config(
         app,
         host=host,

@@ -13,6 +13,7 @@ import subprocess
 ###########################################################################################
 
 shapiro_server.CONTENT_DIR = "./test/ontologies"
+shapiro_server.build_base_url("127.0.0.1", 8000, False)
 
 shutil.rmtree(
     shapiro_server.INDEX_DIR, ignore_errors=True
@@ -49,7 +50,7 @@ def test_get_server():
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.BAD_SCHEMAS
-    assert len(result) == 4
+    assert len(result) == 5
     response = client.get("/bad/person1_with_syntax_error")
     assert response.status_code == 406
     mime = "application/ld+json"
@@ -239,15 +240,9 @@ def test_get_non_existing_schema_element_html():
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 404
 
-def test_404_in_schema_element_html():
-    mime_in = "text/html"
-    response = client.get("/person/foo", headers={"accept": mime_in})
-    assert response.headers["content-type"].startswith(mime_in)
-    assert response.status_code == 404
-
 def test_get_existing_jsonld_schema_as_jsonld():
     mime = "application/ld+json"
-    response = client.get("/person", headers={"accept": mime})
+    response = client.get("/person_1", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
@@ -255,20 +250,20 @@ def test_get_existing_jsonld_schema_as_jsonld():
 def test_get_existing_jsonld_schema_as_jsonld_with_multiple_weighted_accept_headers():
     mime_in = "application/ld+json;q=0.9,text/turtle;q=0.8"
     mime_out = "application/ld+json"
-    response = client.get("/person", headers={"accept": mime_in})
+    response = client.get("/person_1", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_out)
     assert response.status_code == 200
 
 
 def test_get_existing_jsonld_schema_as_ttl():
     mime = "text/turtle"
-    response = client.get("/person", headers={"accept": mime})
+    response = client.get("/person_1", headers={"accept": mime})
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
 def test_get_existing_jsonld_schema_as_ttl_with_long_accept_header():
     mime_in = "application/rdf+xml,application/ld+json;q=1,text/turtle;v=b3;q=0.5,text/html"
-    response = client.get("/person", headers={"accept": mime_in})
+    response = client.get("/person_1", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith("application/ld+json")
     assert response.status_code == 200
 
@@ -312,7 +307,7 @@ def test_get_existing_ttl_schema_deep_down_in_the_hierarchy_as_ttl():
 
 def test_get_existing_jsonld_schema_as_default_without_accept_header():
     mime = ""
-    response = client.get("/person", headers={"accept": mime})
+    response = client.get("/person_1", headers={"accept": mime})
     assert response.headers["content-type"].startswith(shapiro_server.MIME_DEFAULT)
     assert response.status_code == 200
 
@@ -542,7 +537,7 @@ def test_validate_with_remote_schema():
 
 def test_features_switching_only_serve():
     shapiro_server.activate_routes("serve")
-    response = client.get("/person")
+    response = client.get("/person_1")
     assert response.status_code == 200
     response = client.post(
         "/validate/com/example/org/person",
@@ -555,7 +550,7 @@ def test_features_switching_only_serve():
 
 def test_features_switching_only_validate():
     shapiro_server.activate_routes("validate")
-    response = client.get("/person")
+    response = client.get("/person_1")
     assert response.status_code == 404
     with open("./test/data/person2_data_invalid.jsonld") as data_file:
         response = client.post(
@@ -764,19 +759,11 @@ def test_get_ranked_mime_types_with_none():
     result = shapiro_server.get_ranked_mime_types(None)
     assert result == ['']
 
-def test_no_base_url():
-    shapiro_server.BASE_URL = None
-    response = client.get("/query/")
-    assert response.status_code == 200
-    shapiro_server.BASE_URL = None
-    response = client.get("/search/")
-    assert response.status_code == 200
-    shapiro_server.BASE_URL = None
-    response = client.get("/schemas/")
-    assert response.status_code == 200
-    shapiro_server.BASE_URL = None
-    response = client.get("/welcome/")
-    assert response.status_code == 200
+def test_build_base_url():
+    shapiro_server.build_base_url("myHost", 3333, True)
+    assert shapiro_server.BASE_URL == "https://myHost:3333/"
+    shapiro_server.build_base_url("myHost", 3333, False)
+    assert shapiro_server.BASE_URL == "http://myHost:3333/"
 
 def test_prune():
     p = prune_iri("/a/b/c/")
