@@ -13,7 +13,7 @@ import subprocess
 ###########################################################################################
 
 shapiro_server.CONTENT_DIR = "./test/ontologies"
-shapiro_server.build_base_url("127.0.0.1", 8000, False)
+shapiro_server.build_base_url("127.0.0.1:8000", False)
 
 shutil.rmtree(
     shapiro_server.INDEX_DIR, ignore_errors=True
@@ -42,6 +42,7 @@ def test_get_server():
     server = shapiro_server.get_server(
         "127.0.0.1",
         8000,
+        "127.0.0.1:8000",
         shapiro_server.CONTENT_DIR,
         "info",
         "text/turtle",
@@ -65,6 +66,7 @@ def test_commandline_parse_to_default():
     args = shapiro_server.get_args()
     assert args.host == "127.0.0.1"
     assert args.port == 8000
+    assert args.domain == "127.0.0.1:8000"
     assert args.content_dir == "./"
     assert args.log_level == "info"
     assert args.default_mime == "text/turtle"
@@ -83,6 +85,8 @@ def test_commandline_parse_to_specified_values():
             "0.0.0.0",
             "--port",
             "1234",
+            "--domain",
+            "schemas.example.org",
             "--content_dir",
             "./foo",
             "--log_level",
@@ -106,6 +110,7 @@ def test_commandline_parse_to_specified_values():
     )
     assert args.host == "0.0.0.0"
     assert args.port == 1234
+    assert args.domain == "schemas.example.org"
     assert args.content_dir == "./foo"
     assert args.log_level == "bar"
     assert args.default_mime == "foobar"
@@ -776,10 +781,12 @@ def test_get_ranked_mime_types_with_none():
 
 
 def test_build_base_url():
-    shapiro_server.build_base_url("myHost", 3333, True)
-    assert shapiro_server.BASE_URL == "https://myHost:3333/"
-    shapiro_server.build_base_url("myHost", 3333, False)
-    assert shapiro_server.BASE_URL == "http://myHost:3333/"
+    shapiro_server.build_base_url("myHost", True)
+    assert shapiro_server.BASE_URL == "https://myHost/"
+    shapiro_server.build_base_url("myHost", False)
+    assert shapiro_server.BASE_URL == "http://myHost/"
+    shapiro_server.build_base_url("myHost:1234/", True)
+    assert shapiro_server.BASE_URL == "https://myHost:1234/"
 
 
 def test_prune():

@@ -838,6 +838,16 @@ def get_args(argv=[]):
         default=8000,
     )
     parser.add_argument(
+        "--domain",
+        help="""The domain that Shapiro uses to build its BASE_URL. Defaults to '127.0.0.1:8000' and is typically set to the domain name
+                under which you deploy Shapiro.
+                This is what Shapiro uses to ensure schemas are rooted on its server, to build links in the HTML docs 
+                and it's also the URL Shapiro uses to resolve static resources in HTML renderings. 
+                Include the port if needed. Examples: --domain schemas.myorg.com, --domain schemas.myorg.com:1234""",
+        type=str,
+        default="127.0.0.1:8000",
+    )
+    parser.add_argument(
         "--content_dir",
         help='The content directory to be used. Defaults to "./"',
         type=str,
@@ -882,22 +892,22 @@ def get_args(argv=[]):
     return parser.parse_args(argv)
 
 
-def build_base_url(host: str, port: int, is_ssl: bool):
-    # no trailing '/' please
+def build_base_url(domain: str, is_ssl: bool):
     global BASE_URL
     if is_ssl == True:
         BASE_URL = "https://"
     else:
         BASE_URL = "http://"
-    BASE_URL += host
-    if port is not None:
-        BASE_URL += ":" + str(port)
-    BASE_URL += "/"
+    BASE_URL += domain
+    if not domain.endswith("/"):
+        BASE_URL += "/"
+    log.info("Using BASE_URL: {}".format(BASE_URL))
 
 
 def get_server(
     host: str,
     port: int,
+    domain: str,
     content_dir: str,
     log_level: str,
     default_mime: str,
@@ -918,8 +928,7 @@ def get_server(
     global INDEX_DIR
     INDEX_DIR = index_dir
     build_base_url(
-        host,
-        port,
+        domain,
         (
             ssl_keyfile is not None
             or ssl_certfile is not None
@@ -961,6 +970,7 @@ def activate_routes(features: str):
 async def start_server(
     host: str,
     port: int,
+    domain: str,
     content_dir: str,
     log_level: str,
     default_mime: str,
@@ -975,6 +985,7 @@ async def start_server(
     await get_server(
         host,
         port,
+        domain,
         content_dir,
         log_level,
         default_mime,
@@ -992,6 +1003,7 @@ def main(argv=None):
         start_server(
             args.host,
             args.port,
+            args.domain,
             args.content_dir,
             args.log_level,
             args.default_mime,
