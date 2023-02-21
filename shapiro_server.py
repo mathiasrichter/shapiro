@@ -203,7 +203,8 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                         full_name, x
                     )
                 )
-                BAD_SCHEMAS.append(full_name)
+                if full_name not in BAD_SCHEMAS:
+                    BAD_SCHEMAS.append(full_name)
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -501,7 +502,10 @@ async def validate(schema_path: str, request: Request):
             and alt_netloc not in schema_path
         ):  # last 2 predicates avoid doing remote calls to this server
             # this is the host name of some other server, so let pyshacl resolve the URI
-            schema_graph = "http://" + schema_path
+            if BASE_URL.startswith("https://"):
+                schema_graph = "https://" + schema_path
+            else:
+                schema_graph = "http://" + schema_path
             log.info("Resolving remote schema at '{}'".format(schema_graph))
             log.info("Request URL is '{}'".format(request.url._url))
         else:
