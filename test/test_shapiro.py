@@ -5,7 +5,10 @@ import shutil
 import shapiro_server
 from shapiro_util import BadSchemaException, NotFoundException, prune_iri
 from shapiro_model import Subscriptable
+from shapiro_render import JsonSchemaRenderer
 import subprocess
+from datetime import datetime
+import os
 
 ###########################################################################################
 # for running with an html coverage report :
@@ -411,6 +414,11 @@ def test_convert_with_unkown_mime_yields_none():
     )
     assert result is None
 
+def test_jsonschema_renderer():
+    r = JsonSchemaRenderer()
+    r.render_model("")
+    r.render_nodeshape("")
+
 
 def test_validate_with_compliant_jsonld_data():
     with open("./test/data/person2_data_valid.jsonld") as data_file:
@@ -780,15 +788,6 @@ def test_get_ranked_mime_types_with_none():
     assert result == [""]
 
 
-def test_build_base_url():
-    shapiro_server.build_base_url("myHost", True)
-    assert shapiro_server.BASE_URL == "https://myHost/"
-    shapiro_server.build_base_url("myHost", False)
-    assert shapiro_server.BASE_URL == "http://myHost/"
-    shapiro_server.build_base_url("myHost:1234/", True)
-    assert shapiro_server.BASE_URL == "https://myHost:1234/"
-
-
 def test_prune():
     p = prune_iri("/a/b/c/")
     assert p == "C"
@@ -808,6 +807,48 @@ def test_schema_housekeeping():
 def test_search_housekeeping_unsuccessful():
     shapiro_server.SearchIndexHousekeeping(index_dir="./")
 
+def test_bad_schema_housekeeping():
+    try:
+        b = shapiro_server.BadSchemaHousekeeping()
+        b.last_execution_time = datetime.now()
+        sleep(3) # give it a few seconds
+        schema_file_name = "./test/ontologies/test_bad_schema.ttl"
+        # syntax error - missing a '.' at the end
+        bad_schema = """
+            @prefix : <http://127.0.0.1:8000/test_bad_schema/> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            :Person a rdfs:Class
+        """
+        assert schema_file_name not in shapiro_server.BAD_SCHEMAS
+        with open(schema_file_name, 'w') as f:
+            f.write(bad_schema)
+        b.perform_housekeeping_on([schema_file_name])
+        assert schema_file_name in shapiro_server.BAD_SCHEMAS
+        os.remove(schema_file_name)
+        # same as bad, but with syntax error corrected
+        good_schema = """
+            @prefix : <http://127.0.0.1:8000/test_bad_schema/> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            :Person a rdfs:Class.
+        """    
+        with open(schema_file_name, 'w') as f:
+            f.write(good_schema)
+        b.last_execution_time = datetime.now()
+        sleep(3) # give it a few seconds
+        b.perform_housekeeping_on([schema_file_name])
+        assert schema_file_name not in shapiro_server.BAD_SCHEMAS
+    finally:
+        os.remove(schema_file_name)
+
+  
+def test_build_base_url():
+    shapiro_server.build_base_url("myHost", True)
+    assert shapiro_server.BASE_URL == "https://myHost/"
+    shapiro_server.build_base_url("myHost", False)
+    assert shapiro_server.BASE_URL == "http://myHost/"
+    shapiro_server.build_base_url("myHost:1234/", True)
+    assert shapiro_server.BASE_URL == "https://myHost:1234/"
+
 
 # ensure this executes second to last
 def test_teardown():
@@ -822,3 +863,4 @@ def test_teardown():
 def test_shapiro_main():
     shapiro_server.main([])
     shapiro_server.shutdown()
+    subprocess.run(["python3", "shapiro_server.py", "--help"])

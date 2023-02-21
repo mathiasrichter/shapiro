@@ -196,6 +196,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                     BAD_SCHEMAS.remove(
                         full_name
                     )  # it was a bad schema, but changed and now is a good schema
+                    log.info("Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
             except Exception as x:
                 log.warning(
                     "Housekeeping: Detected issues with schema '{}':{}".format(

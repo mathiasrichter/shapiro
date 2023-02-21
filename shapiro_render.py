@@ -28,6 +28,18 @@ def url(value: str) -> str:
     return value
 
 
+class JsonSchemaRenderer:
+    
+    def __init__(self):
+        pass
+    
+    def render_model(self, model_iri:str) -> str:
+        pass
+    
+    def render_nodeshape(self, model_iri:str) -> str:
+        pass    
+
+
 class HtmlRenderer:
     def __init__(self, template_path: str = "./templates"):
         self.queries = []
