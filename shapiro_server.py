@@ -127,7 +127,7 @@ class EKGHouseKeeping(SchemaHousekeeping):
         """
         global EKG
         if EKG is None or len(schemas) > 0:
-            log.info("Housekeeping: Rebuilding knowledge graph.")
+            log.info("EKG Housekeeping: Rebuilding knowledge graph.")
             EKG = Graph()
             walk_schemas(CONTENT_DIR, self.add_schema)
 
@@ -137,13 +137,13 @@ class EKGHouseKeeping(SchemaHousekeeping):
                 with open(full_name, "r") as f:
                     EKG.parse(file=f)
                 log.info(
-                    "Housekeeping: Ingested '{}' into knowledge graph.".format(
+                    "EKG Housekeeping: Ingested '{}' into knowledge graph.".format(
                         full_name
                     )
                 )
             except Exception as x:
                 log.error(
-                    "Could not ingest '{}' into knowledge graph: {}".format(
+                    "EKG Housekeeping: Could not ingest '{}' into knowledge graph: {}".format(
                         schema_path, x
                     )
                 )
@@ -154,7 +154,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
     Regularly check for bad schemas.
     """
 
-    def __init__(self, sleep_seconds: float = 60.0 * 30.0):
+    def __init__(self, sleep_seconds: float = 60.0 * 10.0):
         super().__init__(sleep_seconds)
 
     def perform_housekeeping_on(self, schemas: List[str]):
@@ -188,7 +188,7 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                         break
                 if found is False:
                     raise Exception(
-                        "Schema '{}' doesn't seem to have any origin on this server.".format(
+                        "Bad Schema Housekeeping: Schema '{}' doesn't seem to have any origin on this server or is not in the right directory on this server.".format(
                             path
                         )
                     )
@@ -196,15 +196,18 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                     BAD_SCHEMAS.remove(
                         full_name
                     )  # it was a bad schema, but changed and now is a good schema
-                    log.info("Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
+                    log.info("Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
             except Exception as x:
                 log.warning(
-                    "Housekeeping: Detected issues with schema '{}':{}".format(
+                    "Bad Schema Housekeeping: Detected issues with schema '{}':{}".format(
                         full_name, x
                     )
                 )
                 if full_name not in BAD_SCHEMAS:
                     BAD_SCHEMAS.append(full_name)
+                    log.info("Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
+                else:
+                    log.info("Bad Schema Housekeeping: {} already in list of bad schemas.".format(full_name))
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -212,22 +215,22 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
     Regularly index new or changed schemas in the search index for providing full text search in schemas.
     """
 
-    def __init__(self, index_dir: str = INDEX_DIR, sleep_seconds: float = 60.0 * 30.0):
+    def __init__(self, index_dir: str = INDEX_DIR, sleep_seconds: float = 60.0 * 10.0):
         super().__init__(sleep_seconds)
         schema = Schema(
             full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer())
         )
-        log.info("Housekeeping: Using index directory '{}'".format(index_dir))
+        log.info("Full-text Search Housekeeping: Using index directory '{}'".format(index_dir))
         if os.path.exists(index_dir) == False:
             log.info("Housekeeping: Creating search index for schemas.")
             os.mkdir(index_dir)
             self.index = whoosh_index.create_in(index_dir, schema)
         else:
-            log.info("Housekeeping: Using existing search index for schemas.")
+            log.info("Full-text Search Housekeeping: Using existing search index for schemas.")
             try:
                 self.index = whoosh_index.open_dir(index_dir)
             except:
-                log.error("Houskeeping: Index directory does not contain index files.")
+                log.error("Full-text Search Houskeeping: Index directory does not contain index files.")
 
     def perform_housekeeping_on(self, schemas: List[str]):
         """
@@ -237,7 +240,7 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
         for s in schemas:
             if s not in BAD_SCHEMAS:
                 with open(s, "r") as f:
-                    log.info("Housekeeping: Indexing {}".format(s))
+                    log.info("Full-text Search Housekeeping: Indexing {}".format(s))
                     writer.update_document(full_name=s, content=f.read())
         writer.commit()
 
