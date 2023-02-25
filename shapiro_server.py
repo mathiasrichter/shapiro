@@ -322,7 +322,13 @@ async def get_badschema_list(request: Request):
     on this server's BASE_URL), so Shapiro quanrantines them and does not serve them)
     """
     log.info("Retrieving list of bad schemas")
-    return JSONResponse(content={"badschemas": BAD_SCHEMAS})
+    result = {'badschemas':[]}
+    for k in BAD_SCHEMAS.keys():
+        result['badschemas'].append({
+            'name': k,
+            'reason': BAD_SCHEMAS[k]
+        })
+    return JSONResponse(content=result)
 
 @app.get("/search/", status_code=200)
 async def search(query: str = None, request: Request = None):

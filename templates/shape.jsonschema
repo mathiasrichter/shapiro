@@ -8,6 +8,8 @@
     "properties": {
         "{{p.iri}}": {
             "description": "{{p.comment}}",
+TODO: array types (if shacl maxCount is > 1)
+TODO: Object references (get embedded)
             "type": "{{p.type}}"{% if p.constraint_count > 0 %},{% endif %}
             {% for c in p.constraints %}
             "{{c.name}}" : "{{c.value}}"{% if not forloop.last %},{% endif %}

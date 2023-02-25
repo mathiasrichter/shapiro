@@ -165,6 +165,22 @@ var setSchemaTable = function(search_text)
         });
 };
 
+var setBadSchemaTable = function()
+{
+    url = '/badschemas/'
+    $('#badSchemaList').DataTable(
+        {
+            'ajax': 
+            {
+                'url': url, 
+                'dataSrc': 'badschemas'
+            },
+            'columns': [
+                { 'data': 'name' }, 
+                { 'data': 'reason' }
+            ]
+        });
+};
 var codeIconSvg = function() 
 {
     // https://icons.getbootstrap.com/icons/code-square/

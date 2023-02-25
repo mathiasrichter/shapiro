@@ -48,6 +48,20 @@
                   </table>
             </div>
         </section>
+        <section class="page-section pt-4 pb-4">
+            <div class="container">
+                <h2 id="badSchemaTableHeader" class="mb-2">Quarantined Schemas</h2>
+                <p class="pb-4">These schemas have been quarantined by Shapiro and will not be served.</p>
+                <table id="badSchemaList" class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+                    <thead>
+                      <tr>
+                        <th class="th-sm">Quarantined Schema</th>
+                        <th class="th-sm">Reason</th>
+                      </tr>
+                    </thead>
+                  </table>
+            </div>
+        </section>
         <footer class="footer text-center pb-4 pt-4">
             <div class="container">
                 <div class="row">
@@ -87,6 +101,7 @@
         <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js" type="text/javascript"></script>
         <script type="application/javascript">
             $(document).ready(setSchemaTable());
+            $(document).ready(setBadSchemaTable());
             $("#searchText").keyup(function(event) 
             {
                 if (event.keyCode === 13) 
