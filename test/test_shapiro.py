@@ -54,6 +54,10 @@ def test_get_server():
     )
     assert server is not None
 
+def test_get_badschemas():
+    response = client.get("/badschemas/")
+    assert response.status_code == 200
+    assert len(response.json()["badschemas"]) == len(shapiro_server.BAD_SCHEMAS)
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.BAD_SCHEMAS
@@ -806,6 +810,10 @@ def test_schema_housekeeping():
 
 def test_search_housekeeping_unsuccessful():
     shapiro_server.SearchIndexHousekeeping(index_dir="./")
+    
+def test_ekg_housekeeping_unsuccessful():
+    e = shapiro_server.EKGHouseKeeping()
+    e.add_schema("invalidpath", "invalidname", "invalidschemapath", "invalidsuffix")
 
 def test_bad_schema_housekeeping():
     try:
@@ -819,11 +827,11 @@ def test_bad_schema_housekeeping():
             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
             :Person a rdfs:Class
         """
-        assert schema_file_name not in shapiro_server.BAD_SCHEMAS
+        assert schema_file_name not in shapiro_server.BAD_SCHEMAS.keys()
         with open(schema_file_name, 'w') as f:
             f.write(bad_schema)
         b.perform_housekeeping_on([schema_file_name])
-        assert schema_file_name in shapiro_server.BAD_SCHEMAS
+        assert schema_file_name in shapiro_server.BAD_SCHEMAS.keys()
         os.remove(schema_file_name)
         # same as bad, but with syntax error corrected
         good_schema = """
@@ -836,7 +844,7 @@ def test_bad_schema_housekeeping():
         b.last_execution_time = datetime.now()
         sleep(3) # give it a few seconds
         b.perform_housekeeping_on([schema_file_name])
-        assert schema_file_name not in shapiro_server.BAD_SCHEMAS
+        assert schema_file_name not in shapiro_server.BAD_SCHEMAS.keys()
     finally:
         os.remove(schema_file_name)
 

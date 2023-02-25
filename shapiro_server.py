@@ -44,7 +44,7 @@ IGNORE_NAMESPACES = []
 
 CONTENT_DIR = "./"
 INDEX_DIR = "./fts_index"
-BAD_SCHEMAS = []
+BAD_SCHEMAS = {}
 ROUTES = None
 HOUSEKEEPERS = []
 
@@ -132,7 +132,7 @@ class EKGHouseKeeping(SchemaHousekeeping):
             walk_schemas(CONTENT_DIR, self.add_schema)
 
     def add_schema(self, path: str, full_name: str, schema_path: str, suffix: str):
-        if full_name not in BAD_SCHEMAS:
+        if full_name not in BAD_SCHEMAS.keys():
             try:
                 with open(full_name, "r") as f:
                     EKG.parse(file=f)
@@ -192,22 +192,20 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                             path
                         )
                     )
-                if full_name in BAD_SCHEMAS:
-                    BAD_SCHEMAS.remove(
-                        full_name
-                    )  # it was a bad schema, but changed and now is a good schema
-                    log.info("Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
+                if full_name in BAD_SCHEMAS.keys():
+                    del BAD_SCHEMAS[full_name] # it was a bad schema, but changed and now is a good schema
+                    log.info("Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS.keys()))
             except Exception as x:
                 log.warning(
                     "Bad Schema Housekeeping: Detected issues with schema '{}':{}".format(
                         full_name, x
                     )
                 )
-                if full_name not in BAD_SCHEMAS:
-                    BAD_SCHEMAS.append(full_name)
-                    log.info("Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS))
+                if full_name not in BAD_SCHEMAS.keys():
+                    log.info("Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS.keys()))
                 else:
                     log.info("Bad Schema Housekeeping: {} already in list of bad schemas.".format(full_name))
+                BAD_SCHEMAS[full_name] = str(x) 
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -238,7 +236,7 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
         """
         writer = self.index.writer()
         for s in schemas:
-            if s not in BAD_SCHEMAS:
+            if s not in BAD_SCHEMAS.keys():
                 with open(s, "r") as f:
                     log.info("Full-text Search Housekeeping: Indexing {}".format(s))
                     writer.update_document(full_name=s, content=f.read())
@@ -255,7 +253,9 @@ def init():
         )
     )
     global HOUSEKEEPERS
-    HOUSEKEEPERS.append(BadSchemaHousekeeping())
+    b = BadSchemaHousekeeping()
+    b.check_for_schema_updates() # run once synchronously so all other housekeepers can ignore quarantined schemas
+    HOUSEKEEPERS.append(b)
     HOUSEKEEPERS.append(SearchIndexHousekeeping())
     HOUSEKEEPERS.append(EKGHouseKeeping())
     for h in HOUSEKEEPERS:
@@ -310,11 +310,19 @@ async def get_schema_list(request: Request):
             "full_name": full_name,
             "link": str(BASE_URL) + schema_path,
         }
-        if full_name not in BAD_SCHEMAS
+        if full_name not in BAD_SCHEMAS.keys()
         else None,
     )
     return JSONResponse(content={"schemas": result})
 
+@app.get("/badschemas/", status_code=200)
+async def get_badschema_list(request: Request):
+    """
+    Return a list of the bad schemas JSON-data. The bad schemas have issues (either syntactially or they are not rooted
+    on this server's BASE_URL), so Shapiro quanrantines them and does not serve them)
+    """
+    log.info("Retrieving list of bad schemas")
+    return JSONResponse(content={"badschemas": BAD_SCHEMAS})
 
 @app.get("/search/", status_code=200)
 async def search(query: str = None, request: Request = None):
@@ -342,7 +350,7 @@ async def search(query: str = None, request: Request = None):
                     "link": str(request.base_url) + schema_path,
                 }
                 if hit not in hits:
-                    if r["full_name"] not in BAD_SCHEMAS:
+                    if r["full_name"] not in BAD_SCHEMAS.keys():
                         hits.append(hit)
         return JSONResponse(content={"schemas": hits})
     except Exception as x:
@@ -638,7 +646,7 @@ def convert(path: str, filename: str, content: str, mime_type: str):
     Convert the content (from the specified iri-path and filename) to the format
     according to the specified mime type.
     """
-    if filename in BAD_SCHEMAS:
+    if filename in BAD_SCHEMAS.keys():
         raise BadSchemaException()
     if mime_type == MIME_HTML:
         if filename[0 : filename.rfind(".")].endswith(path):
