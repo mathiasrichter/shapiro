@@ -27,6 +27,7 @@ from liquid import StrictUndefined
 from liquid import FileSystemLoader
 from shapiro_render import HtmlRenderer
 from shapiro_util import BadSchemaException, NotFoundException, get_logger
+from multiprocessing import Process
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
@@ -180,9 +181,9 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                     # at least once in an RDF-triple
                     if found is False:
                         found = (
-                            str(s).find(path) > -1
-                            or str(p).find(path) > -1
-                            or str(o).find(path) > -1
+                            str(s).lower().find(path.lower()) > -1
+                            or str(p).lower().find(path.lower()) > -1
+                            or str(o).lower().find(path.lower()) > -1
                         )
                     if found is True:
                         break
@@ -202,10 +203,10 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                     )
                 )
                 if full_name not in BAD_SCHEMAS.keys():
+                    BAD_SCHEMAS[full_name] = str(x) 
                     log.info("Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS.keys()))
                 else:
                     log.info("Bad Schema Housekeeping: {} already in list of bad schemas.".format(full_name))
-                BAD_SCHEMAS[full_name] = str(x) 
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -520,10 +521,10 @@ async def validate(schema_path: str, request: Request):
         ):  # last 2 predicates avoid doing remote calls to this server
             # this is the host name of some other server, so let pyshacl resolve the URI
             if BASE_URL.startswith("https://"):
-                schema_graph = "https://" + schema_path
+                schema_graph = Graph().parse("https://" + schema_path)
             else:
-                schema_graph = "http://" + schema_path
-            log.info("Resolving remote schema at '{}'".format(schema_graph))
+                schema_graph = Graph().parse("http://" + schema_path)
+            log.info("Resolving remote schema at '{}'".format(schema_path))
             log.info("Request URL is '{}'".format(request.url._url))
         else:
             mod_schema_path = schema_path
@@ -549,8 +550,7 @@ async def validate(schema_path: str, request: Request):
                 schema_graph.parse(schema, format="ttl")
                 log.info("Resolving local schema at '{}'".format(schema_path))
         result = pyshacl.validate(
-            data_graph,
-            shacl_graph=schema_graph,
+            data_graph+schema_graph, # needed to ensure inheritance is picked up properly
             inference="rdfs",
             serialize_report_graph="json-ld",
         )

@@ -420,8 +420,7 @@ def test_convert_with_unkown_mime_yields_none():
 
 def test_jsonschema_renderer():
     r = JsonSchemaRenderer()
-    r.render_model("")
-    r.render_nodeshape("")
+    r.render_nodeshape("http://127.0.0.1:8000/com/example/org/person/PersonShape")
 
 
 def test_validate_with_compliant_jsonld_data():

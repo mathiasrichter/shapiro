@@ -6,8 +6,60 @@ from shapiro_util import NotFoundException, prune_iri, get_logger
 from urllib.parse import urlparse
 import logging
 
-log = get_logger("SHAPIRO_RENDER")
+log = get_logger("SHAPIRO_MODEL")
 
+TYPE_MAP = {
+    # maps (unprefixed) XSD datatypes to JSON-Schema types
+    "string": "string",
+    "boolean": "boolean",
+    "decimal": "number",
+    "integer": "integer",
+    "float": "number",
+    "date": "string", # with "format": "date"
+    "time": "string", # with "format": "time"
+    "dateTime": "string", # with "format": "date-time"
+    "dateTimeStamp": "string",
+    "gMonth": "string",
+    "gDay": "string",
+    "gYearMonth": "string",
+    "gMonthDay": "string",
+    "duration": "string",
+    "yearMonthDuration": "string",
+    "dayTimeDuration": "string",
+    "short": "integer",
+    "int": "integer",
+    "long": "integer",
+    "unsignedByte": "integer",
+    "unsignedShort": "integer",
+    "unsignedInt": "integer",
+    "unsignedLong": "integer",
+    "positiveInteger": "integer",
+    "nonNegativeInteger": "integer",
+    "negativeInteger": "integer",
+    "nonPositiveInteger": "integer",
+    "hexBinary": "string",
+    "base64Binary": "string",
+    "language": "string",
+    "normalizedString": "string",
+    "token": "string",
+    "NMTOKEN": "string",
+    "Name": "string",
+    "NCName": "string"
+}
+
+CONSTRAINT_MAP = {
+    # maps (unprefixed) SHACL constraints to JSON-Schema constraints
+    "minCount": "minItems", # for arrays only, "required" handled differently
+    "maxCount": "maxItems", # ditto
+    "in": "enum",
+    "minInclusive": "minimum",
+    "maxInclusive": "maximum",
+    "minExclusive": "exclusiveMinimum",
+    "maxExclusive": "exclusiveMaximum",
+    "minLength": "minLength",
+    "maxLength": "maxLength",
+    "pattern": "pattern"
+}
 
 class Subscriptable:
     def __getitem__(self, key):
@@ -398,7 +450,49 @@ class ShaclProperty(SemanticModelElement):
             constraints.append(ShaclConstraint(str(r.constraint), str(r.value)))
         constraints.sort(key=lambda c: c.constraint_iri)
         return constraints
-
+    
+    def is_required(self):
+        constraints = self.get_constraints()
+        minCount = list(filter(lambda c: c.constraint_iri.lower().endswith("mincount"), constraints ))
+        if len(minCount) == 1:
+            return int(minCount[0].value) >= 1
+        return False
+    
+    def is_array(self):
+        constraints = self.get_constraints()
+        maxCount = list(filter(lambda c: c.constraint_iri.lower().endswith("maxcount"), constraints))
+        if len(maxCount) == 1:
+            return int(maxCount[0].value) > 1
+        return False
+    
+    def get_json_schema_type(self):
+        t = self.datatype()
+        if t is not None:
+            for k in TYPE_MAP.keys():
+                if t.lower().endswith(k):
+                    return TYPE_MAP[k]
+        return None # no mapping found, return None meaning no constraint is put in JSON-SCHEMA
+    
+    def datatype(self):
+        constraints = self.get_constraints()
+        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints))
+        if len(datatype) == 1: # must be simple type
+            return datatype[0].value
+        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints))
+        if len(datatype) == 1: # relationship to instances of another class
+            return datatype[0].value
+        return None
+    
+    def is_object_reference(self):
+        constraints = self.get_constraints()
+        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints))
+        if len(datatype) == 1: # must be simple type
+            return False
+        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints))
+        if len(datatype) == 1: # relationship to instances of another class
+            return True
+        return False # meaning we will not put any constraint in JSON-SCHEMA
+        
     def get_nodeshapes(self):
         prop = None
         if urlparse(self.iri).scheme == "":  #  if this is a blank node
