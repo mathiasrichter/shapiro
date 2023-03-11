@@ -1,0 +1,50 @@
+{% comment %} 
+    Inspired by the JSON-SCHEMA material here:
+    https://www.mongodb.com/basics/json-schema-examples
+    https://json-schema.org/understanding-json-schema/structuring.html
+
+    Basic approach is to generate JSON-SCHEMA for a given SHACL node shape.
+    Properties for simple types (string, number, date, bool) and
+    arrays thereof are converted into the correspondng JSON-SCHEMA structures,
+    references to other objects are rendered as $ref pointing to the IRI of the node shape
+    which would make any tooling processing the JSON-SCHEMA request the conversion of
+    the node shape pointed to under the IRI in a similar fashion.
+{% endcomment %}
+
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$id": "{{shape_iri}}",
+    "title": "{{shape_label}}",
+    "description": "{{shape_description}}",
+    "type": "object",
+    {% for p in properties %}
+    "properties": {
+        "{{p.iri}}": {
+            {% if p.is_array %}
+                "type": "array",
+                "items": {
+                    {% if p.is_object == false %}
+                        "$ref": "{{p.iri}}"
+                    {% else %}
+                        "type": "{{p.type}}"
+                    {% endif %}
+                }
+            {% elsif p.is_object %}
+                "$ref" : "{{p.iri}}"
+            {% else %}
+                "description": "{{p.description}}",
+                "type": "{{p.type}}"{% if p.constraint_count > 0 %},{% endif %}
+                {% for c in p.constraints %}
+                    "{{c.name}}" : "{{c.value}}"{% if forloop.last == false %},{% endif %}
+                {% endfor %}
+            {% endif %}
+        }{% if forloop.last == false %},{% endif %}
+    }{% if required_count > 0  %},
+    "required": [
+        {% for r in required %}
+        "{{r}}"{% if forloop.last == false %},{% endif %}
+        {% endfor %}
+    ]
+    {% endif %}
+    {% endfor %}
+}
