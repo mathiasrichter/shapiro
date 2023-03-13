@@ -25,21 +25,21 @@ from liquid import Environment
 from liquid import Mode
 from liquid import StrictUndefined
 from liquid import FileSystemLoader
-from shapiro_render import HtmlRenderer
+from shapiro_render import HtmlRenderer, JsonSchemaRenderer
 from shapiro_util import BadSchemaException, NotFoundException, get_logger
 from multiprocessing import Process
 
 MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
 MIME_TTL = "text/turtle"
-MIME_JSONSCHEMA = "application/json"
+MIME_JSONSCHEMA = "application/schema+json"
 MIME_DEFAULT = MIME_TTL
 
 SUFFIX_JSONLD = ".jsonld"
 SUFFIX_TTL = ".ttl"
 SUPPORTED_SUFFIXES = [SUFFIX_JSONLD, SUFFIX_TTL]
 
-SUPPORTED_MIME_TYPES = [MIME_JSONLD.lower(), MIME_TTL.lower(), MIME_HTML.lower()]
+SUPPORTED_MIME_TYPES = [MIME_JSONLD.lower(), MIME_TTL.lower(), MIME_HTML.lower(), MIME_JSONSCHEMA.lower()]
 
 IGNORE_NAMESPACES = []
 
@@ -54,6 +54,8 @@ BASE_URL = None
 EKG = None
 
 HTML_RENDERER = HtmlRenderer()
+
+JSONSCHEMA_RENDERER = JsonSchemaRenderer()
 
 log = get_logger("SHAPIRO_SERVER")
 
@@ -194,8 +196,14 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                         )
                     )
                 if full_name in BAD_SCHEMAS.keys():
-                    del BAD_SCHEMAS[full_name] # it was a bad schema, but changed and now is a good schema
-                    log.info("Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS.keys()))
+                    del BAD_SCHEMAS[
+                        full_name
+                    ]  # it was a bad schema, but changed and now is a good schema
+                    log.info(
+                        "Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(
+                            full_name, BAD_SCHEMAS.keys()
+                        )
+                    )
             except Exception as x:
                 log.warning(
                     "Bad Schema Housekeeping: Detected issues with schema '{}':{}".format(
@@ -203,10 +211,18 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
                     )
                 )
                 if full_name not in BAD_SCHEMAS.keys():
-                    BAD_SCHEMAS[full_name] = str(x) 
-                    log.info("Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(full_name, BAD_SCHEMAS.keys()))
+                    BAD_SCHEMAS[full_name] = str(x)
+                    log.info(
+                        "Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(
+                            full_name, BAD_SCHEMAS.keys()
+                        )
+                    )
                 else:
-                    log.info("Bad Schema Housekeeping: {} already in list of bad schemas.".format(full_name))
+                    log.info(
+                        "Bad Schema Housekeeping: {} already in list of bad schemas.".format(
+                            full_name
+                        )
+                    )
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -219,17 +235,25 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
         schema = Schema(
             full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer())
         )
-        log.info("Full-text Search Housekeeping: Using index directory '{}'".format(index_dir))
+        log.info(
+            "Full-text Search Housekeeping: Using index directory '{}'".format(
+                index_dir
+            )
+        )
         if os.path.exists(index_dir) == False:
             log.info("Housekeeping: Creating search index for schemas.")
             os.mkdir(index_dir)
             self.index = whoosh_index.create_in(index_dir, schema)
         else:
-            log.info("Full-text Search Housekeeping: Using existing search index for schemas.")
+            log.info(
+                "Full-text Search Housekeeping: Using existing search index for schemas."
+            )
             try:
                 self.index = whoosh_index.open_dir(index_dir)
             except:
-                log.error("Full-text Search Houskeeping: Index directory does not contain index files.")
+                log.error(
+                    "Full-text Search Houskeeping: Index directory does not contain index files."
+                )
 
     def perform_housekeeping_on(self, schemas: List[str]):
         """
@@ -255,7 +279,7 @@ def init():
     )
     global HOUSEKEEPERS
     b = BadSchemaHousekeeping()
-    b.check_for_schema_updates() # run once synchronously so all other housekeepers can ignore quarantined schemas
+    b.check_for_schema_updates()  # run once synchronously so all other housekeepers can ignore quarantined schemas
     HOUSEKEEPERS.append(b)
     HOUSEKEEPERS.append(SearchIndexHousekeeping())
     HOUSEKEEPERS.append(EKGHouseKeeping())
@@ -316,6 +340,7 @@ async def get_schema_list(request: Request):
     )
     return JSONResponse(content={"schemas": result})
 
+
 @app.get("/badschemas/", status_code=200)
 async def get_badschema_list(request: Request):
     """
@@ -323,13 +348,11 @@ async def get_badschema_list(request: Request):
     on this server's BASE_URL), so Shapiro quanrantines them and does not serve them)
     """
     log.info("Retrieving list of bad schemas")
-    result = {'badschemas':[]}
+    result = {"badschemas": []}
     for k in BAD_SCHEMAS.keys():
-        result['badschemas'].append({
-            'name': k,
-            'reason': BAD_SCHEMAS[k]
-        })
+        result["badschemas"].append({"name": k, "reason": BAD_SCHEMAS[k]})
     return JSONResponse(content=result)
+
 
 @app.get("/search/", status_code=200)
 async def search(query: str = None, request: Request = None):
@@ -550,7 +573,8 @@ async def validate(schema_path: str, request: Request):
                 schema_graph.parse(schema, format="ttl")
                 log.info("Resolving local schema at '{}'".format(schema_path))
         result = pyshacl.validate(
-            data_graph+schema_graph, # needed to ensure inheritance is picked up properly
+            data_graph
+            + schema_graph,  # needed to ensure inheritance is picked up properly
             inference="rdfs",
             serialize_report_graph="json-ld",
         )
@@ -693,6 +717,12 @@ def convert(path: str, filename: str, content: str, mime_type: str):
                 )
             )
             return {"content": content, "mime_type": mime_type}
+    if mime_type == MIME_JSONSCHEMA:
+        log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
+        return {
+            "content": JSONSCHEMA_RENDERER.render_nodeshape(BASE_URL + path),
+            "mime_type": mime_type
+        }
     log.warning(
         "No conversion possible for content path '{}' and mime type '{}'".format(
             filename, mime_type

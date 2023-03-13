@@ -54,10 +54,12 @@ def test_get_server():
     )
     assert server is not None
 
+
 def test_get_badschemas():
     response = client.get("/badschemas/")
     assert response.status_code == 200
     assert len(response.json()["badschemas"]) == len(shapiro_server.BAD_SCHEMAS)
+
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.BAD_SCHEMAS
@@ -418,9 +420,15 @@ def test_convert_with_unkown_mime_yields_none():
     )
     assert result is None
 
-def test_jsonschema_renderer():
-    r = JsonSchemaRenderer()
-    r.render_nodeshape("http://127.0.0.1:8000/com/example/org/person/PersonShape")
+
+def test_get_existing_nodeshape_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "/com/example/org/person/PersonShape", headers={"accept": mime}
+    )
+    response.json() # ensure JSON-SCHEMA generated is proper JSON
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
 
 
 def test_validate_with_compliant_jsonld_data():
@@ -809,16 +817,18 @@ def test_schema_housekeeping():
 
 def test_search_housekeeping_unsuccessful():
     shapiro_server.SearchIndexHousekeeping(index_dir="./")
-    
+
+
 def test_ekg_housekeeping_unsuccessful():
     e = shapiro_server.EKGHouseKeeping()
     e.add_schema("invalidpath", "invalidname", "invalidschemapath", "invalidsuffix")
+
 
 def test_bad_schema_housekeeping():
     try:
         b = shapiro_server.BadSchemaHousekeeping()
         b.last_execution_time = datetime.now()
-        sleep(3) # give it a few seconds
+        sleep(3)  # give it a few seconds
         schema_file_name = "./test/ontologies/test_bad_schema.ttl"
         # syntax error - missing a '.' at the end
         bad_schema = """
@@ -827,7 +837,7 @@ def test_bad_schema_housekeeping():
             :Person a rdfs:Class
         """
         assert schema_file_name not in shapiro_server.BAD_SCHEMAS.keys()
-        with open(schema_file_name, 'w') as f:
+        with open(schema_file_name, "w") as f:
             f.write(bad_schema)
         b.perform_housekeeping_on([schema_file_name])
         assert schema_file_name in shapiro_server.BAD_SCHEMAS.keys()
@@ -837,17 +847,17 @@ def test_bad_schema_housekeeping():
             @prefix : <http://127.0.0.1:8000/test_bad_schema/> .
             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
             :Person a rdfs:Class.
-        """    
-        with open(schema_file_name, 'w') as f:
+        """
+        with open(schema_file_name, "w") as f:
             f.write(good_schema)
         b.last_execution_time = datetime.now()
-        sleep(3) # give it a few seconds
+        sleep(3)  # give it a few seconds
         b.perform_housekeeping_on([schema_file_name])
         assert schema_file_name not in shapiro_server.BAD_SCHEMAS.keys()
     finally:
         os.remove(schema_file_name)
 
-  
+
 def test_build_base_url():
     shapiro_server.build_base_url("myHost", True)
     assert shapiro_server.BASE_URL == "https://myHost/"

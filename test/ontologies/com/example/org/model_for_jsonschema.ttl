@@ -1,0 +1,56 @@
+@prefix : <http://127.0.0.1:8000/com/example/org/model_for_jsonschema/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix schema: <http://schema.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# This is a - hopefully elaborate - test case for JSON-SCHEMA generation
+# from a semantic model.
+
+# Things to cover:
+# - relationships in different cardinalities
+# - relationships with targets having no, single & multiple nodeshapes
+# - scalar properties for all xsd types (including those which justget translated to string in JSON schema)
+# - scalar properties for date/datatime/etc. (type string with format in json-schema)
+# - arrays
+# - properties referencing other models (e.g. schema.org), where there is no type specified
+# - inheritance of classes
+# - documentation in nodeshapes and shacl properties vs documentation on the target classes and properties
+
+:SimplePerson a rdfs:Class ;
+    rdfs:label "SimplePerson" ;
+    rdfs:comment "A person." ;
+.
+
+:SimplePersonName a rdfs:Property ;
+    rdfs:label "Name" ;
+    rdfs:comment "Name of a person" ;
+.
+
+:Age a rdfs:Property ;
+    rdfs:label "Age" ;
+    rdfs:comment "Age of a person" ;
+.
+
+:SimplePersonShape a sh:NodeShape ;
+    rdfs:label "SimplePerson" ;
+    rdfs:comment "Concrete shape of a simple person.";
+    sh:targetClass :SimplePerson ;
+    sh:property [
+        rdfs:label "Name" ;
+        rdfs:comment "Name of the person" ;
+        sh:path :SimplePersonName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ];
+    sh:property [
+        sh:path :Age ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0;
+        sh:maxInclusive 140;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ];
+.

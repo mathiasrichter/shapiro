@@ -15,9 +15,9 @@ TYPE_MAP = {
     "decimal": "number",
     "integer": "integer",
     "float": "number",
-    "date": "string", # with "format": "date"
-    "time": "string", # with "format": "time"
-    "dateTime": "string", # with "format": "date-time"
+    "date": "string",  # with "format": "date"
+    "time": "string",  # with "format": "time"
+    "dateTime": "string",  # with "format": "date-time"
     "dateTimeStamp": "string",
     "gMonth": "string",
     "gDay": "string",
@@ -44,13 +44,13 @@ TYPE_MAP = {
     "token": "string",
     "NMTOKEN": "string",
     "Name": "string",
-    "NCName": "string"
+    "NCName": "string",
 }
 
 CONSTRAINT_MAP = {
     # maps (unprefixed) SHACL constraints to JSON-Schema constraints
-    "minCount": "minItems", # for arrays only, "required" handled differently
-    "maxCount": "maxItems", # ditto
+    "minCount": "minItems",  # for arrays only, "required" handled differently
+    "maxCount": "maxItems",  # ditto
     "in": "enum",
     "minInclusive": "minimum",
     "maxInclusive": "maximum",
@@ -58,8 +58,9 @@ CONSTRAINT_MAP = {
     "maxExclusive": "exclusiveMaximum",
     "minLength": "minLength",
     "maxLength": "maxLength",
-    "pattern": "pattern"
+    "pattern": "pattern",
 }
+
 
 class Subscriptable:
     def __getitem__(self, key):
@@ -409,6 +410,12 @@ class ShaclConstraint(Subscriptable):
         self.constraint_iri = constraint_iri
         self.value = value
 
+    def get_json_schema_name(self):
+        for k in CONSTRAINT_MAP.keys():
+            if self.constraint_iri.endswith(k):
+                return CONSTRAINT_MAP[k]
+        return None
+
 
 class ShaclProperty(SemanticModelElement):
     SHAPE_QUERY = prepareQuery(
@@ -450,49 +457,89 @@ class ShaclProperty(SemanticModelElement):
             constraints.append(ShaclConstraint(str(r.constraint), str(r.value)))
         constraints.sort(key=lambda c: c.constraint_iri)
         return constraints
-    
+
     def is_required(self):
         constraints = self.get_constraints()
-        minCount = list(filter(lambda c: c.constraint_iri.lower().endswith("mincount"), constraints ))
+        minCount = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("mincount"), constraints)
+        )
         if len(minCount) == 1:
             return int(minCount[0].value) >= 1
         return False
-    
+
     def is_array(self):
         constraints = self.get_constraints()
-        maxCount = list(filter(lambda c: c.constraint_iri.lower().endswith("maxcount"), constraints))
+        maxCount = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("maxcount"), constraints)
+        )
         if len(maxCount) == 1:
             return int(maxCount[0].value) > 1
         return False
-    
+
     def get_json_schema_type(self):
+        # would assume that property shape points to another nodeshape for object references, 
+        # if it does not, we should try and find a suitable nodeshape in the model, which is ok 
+        # if there is only one, but not if there are multiple nodeshapes in the same model
         t = self.datatype()
         if t is not None:
             for k in TYPE_MAP.keys():
                 if t.lower().endswith(k):
+                    # scalar datatype
                     return TYPE_MAP[k]
-        return None # no mapping found, return None meaning no constraint is put in JSON-SCHEMA
-    
+            # must be an object reference, make sure we point to a NodeShape
+            # so JSON-SCHEMA tooling can resolve the $ref to that NodeShape's
+            # JSON-SCHEMA through Shapiro
+            return self.get_nodeshape_for(t)
+        return None  # no mapping found, return None meaning no constraint is put in JSON-SCHEMA
+
+    def get_nodeshape_for(self, iri:str):
+        s = SemanticModel(iri, self.graph)
+        types = s.get_types()
+        nodeshapes = list(filter(lambda t:t.lower().endswith("nodeshape"), types))
+        if len(nodeshapes) > 0:
+            # iri is a nodeshape
+            return iri
+        classes = list(filter(lambda t:t.lower().endswith("class"), types))
+        if len(classes) > 0:
+            # iri is a class, find nodeshape with this class as targetclass in the model
+            clazz = RdfClass(iri, self.graph)
+            nodeshapes = clazz.get_nodeshapes()
+            l = len(nodeshapes)
+            if l > 1:
+                log.warn("Found {} nodeshapes for class {}. Selecting {}.".format(l, iri, nodeshapes[0].iri))
+            if l > 0:
+                return nodeshapes[0].iri
+        raise NotFoundException("Could not find nodeshape for relationship to class {}. Relationships need to resolve to nodeshapes for JSON-SCHEMA generation.")
+
     def datatype(self):
+        # TODO: what if multiple datatypes are defined?
         constraints = self.get_constraints()
-        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints))
-        if len(datatype) == 1: # must be simple type
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints)
+        )
+        if len(datatype) == 1:  # must be simple type
             return datatype[0].value
-        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints))
-        if len(datatype) == 1: # relationship to instances of another class
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints)
+        )
+        if len(datatype) == 1:  # relationship to instances of another class
             return datatype[0].value
         return None
-    
+
     def is_object_reference(self):
         constraints = self.get_constraints()
-        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints))
-        if len(datatype) == 1: # must be simple type
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints)
+        )
+        if len(datatype) == 1:  # must be simple type
             return False
-        datatype = list(filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints))
-        if len(datatype) == 1: # relationship to instances of another class
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints)
+        )
+        if len(datatype) == 1:  # relationship to instances of another class
             return True
-        return False # meaning we will not put any constraint in JSON-SCHEMA
-        
+        return False  # meaning we will not put any constraint in JSON-SCHEMA
+
     def get_nodeshapes(self):
         prop = None
         if urlparse(self.iri).scheme == "":  #  if this is a blank node

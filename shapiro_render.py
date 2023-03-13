@@ -29,7 +29,6 @@ def url(value: str) -> str:
 
 
 class JsonSchemaRenderer:
-    
     def __init__(self, template_path: str = "./templates"):
         self.env = Environment(
             tolerance=Mode.STRICT,
@@ -37,60 +36,57 @@ class JsonSchemaRenderer:
             loader=FileSystemLoader(template_path),
         )
 
-    def render_nodeshape(self, shape_iri:str) -> str:
-        """
-            Information needed by template for json schema:
-            -----------------------------------------------
-            shape_iri
-            shape_label
-            shape_description
-            properties
-                p.iri
-                p.type (is object or simple type, is array, if array type of individual items)
-                p.description
-                p.constraint_count
-                p.constraints
-                    c.name (minLength, maxLength, ...)
-                    c.value (actual value associated with constraint)
-            required_property_count
-            required_properties
-        """
-        log.info("JSON-SCHEMA rendering shape at {}".format(shape_iri))
+    def render_nodeshape(self, shape_iri: str) -> str:
+        log.info("Rendering JSON-SCHEMA for shape at {}".format(shape_iri))
         s = SemanticModel(shape_iri)
         shape_list = s.get_node_shapes()
-        shapes = list(filter(lambda s : s.iri == shape_iri, shape_list))
+        shapes = list(filter(lambda s: s.iri == shape_iri, shape_list))
         if len(shapes) == 0 or len(shapes) > 1:
-            err = "Could not render JSON-SCHEMA - {} shape(s) found for iri '{}'".format(len(shapes),shape_iri)
+            err = (
+                "Could not render JSON-SCHEMA - {} shape(s) found for iri '{}'".format(
+                    len(shapes), shape_iri
+                )
+            )
             log.error(err)
             raise NotFoundException(err)
         shape = shapes[0]
-        properties = [] # list of dicts with all information for each property, including constraints
+        properties = (
+            []
+        )  # list of dicts with all information for each property, including constraints
         for p in shape.get_shacl_properties():
             prop = {
-                    "iri": p.iri,
-                    "type": p.get_json_schema_type(),
-                    "is_object": p.is_object_reference(),
-                    "is_array": p.is_array(),
-                    "name": p.label, # TODO: if label is empty, point to target property label
-                    "description": p.comment, # TODO: if comment is empty, point to target class comment
-                    "is_required": p.is_required()
+                "iri": p.iri,
+                "type": p.get_json_schema_type(), 
+                "is_object": p.is_object_reference(),
+                "is_array": p.is_array(),
+                "name": p.label,  # TODO: if label is empty, point to target property label
+                "description": p.comment,  # TODO: if comment is empty, point to target class comment
+                "is_required": p.is_required(),
             }
             constraints = []
+            for c in p.get_constraints():
+                name = c.get_json_schema_name()
+                if name is not None:
+                    constraints.append({
+                        "name": name,
+                        "value": c.value
+                    })
             prop["constraints"] = constraints
             prop["constraint_count"] = len(constraints)
             properties.append(prop)
-        required = list(filter(lambda p:p["is_required"]==True, properties))
+        required = list(filter(lambda p: p["is_required"] == True, properties))
         content = self.env.get_template("render_model.jsonschema").render(
-            shape_iri = shape_iri,
-            shape_label = shape.label, # TODO: use target class label if shape label is empty
-            shape_description = shape.comment, # TODO: use target class comment if shape comment is empty
-            properties = properties,
-            required = required,
-            required_count = len(required),
-            constraints = constraints,
-            constraint_count = len(constraints)
+            shape_iri=shape_iri,
+            shape_label=shape.label,  # TODO: use target class label if shape label is empty
+            shape_description=shape.comment,  # TODO: use target class comment if shape comment is empty
+            properties=properties,
+            required=required,
+            required_count=len(required),
+            constraints=constraints,
+            constraint_count=len(constraints),
         )
-        
+        return content
+
 
 class HtmlRenderer:
     def __init__(self, template_path: str = "./templates"):
