@@ -2,11 +2,88 @@ from rdflib import Graph, URIRef, BNode
 from rdflib.plugins.sparql import prepareQuery
 from rdflib.plugin import PluginException
 from typing import Tuple, List
-from shapiro_util import NotFoundException, prune_iri, get_logger
+from shapiro_util import prune_iri, get_logger
 from urllib.parse import urlparse
 import logging
 
-log = get_logger("SHAPIRO_RENDER")
+log = get_logger("SHAPIRO_MODEL")
+
+TYPE_MAP = {
+    # maps (unprefixed) XSD datatypes to JSON-Schema types
+    "string": "string",
+    "boolean": "boolean",
+    "decimal": "number",
+    "integer": "integer",
+    "float": "number",
+    "date": "string",  # with "format": "date"
+    "time": "string",  # with "format": "time"
+    "dateTime": "string",  # with "format": "date-time"
+    "dateTimeStamp": "string",  # with "format": "date-time"
+    "gMonth": "string",
+    "gDay": "string",
+    "gYearMonth": "string",
+    "gMonthDay": "string",
+    "duration": "string",
+    "yearMonthDuration": "string",
+    "dayTimeDuration": "string",
+    "short": "integer",
+    "int": "integer",
+    "long": "integer",
+    "unsignedByte": "integer",
+    "unsignedShort": "integer",
+    "unsignedInt": "integer",
+    "unsignedLong": "integer",
+    "positiveInteger": "integer",
+    "nonNegativeInteger": "integer",
+    "negativeInteger": "integer",
+    "nonPositiveInteger": "integer",
+    "hexBinary": "string",
+    "base64Binary": "string",
+    "language": "string",
+    "normalizedString": "string",
+    "token": "string",
+    "NMTOKEN": "string",
+    "Name": "string",
+    "NCName": "string",
+}
+
+CONSTRAINT_MAP = {
+    # maps (unprefixed) SHACL constraints to JSON-Schema constraints
+    "minCount": "minItems",  # for arrays only, "required" handled differently
+    "maxCount": "maxItems",  # ditto
+    "in": "enum",
+    "minInclusive": "minimum",
+    "maxInclusive": "maximum",
+    "minExclusive": "exclusiveMinimum",
+    "maxExclusive": "exclusiveMaximum",
+    "minLength": "minLength",
+    "maxLength": "maxLength",
+    "pattern": "pattern",
+}
+
+NUMERIC_CONSTRAINTS = [
+    # JSON-SCHEMA constraints that take numeric values
+    "minItems",
+    "maxItems",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+]
+
+ARRAY_ITEM_CONSTRAINTS = [
+    # JSON-SCHEMA constraints that apply to items of an array
+    "enum",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+    "pattern",
+]
 
 
 class Subscriptable:
@@ -357,6 +434,15 @@ class ShaclConstraint(Subscriptable):
         self.constraint_iri = constraint_iri
         self.value = value
 
+    def get_json_schema_name(self):
+        for k in CONSTRAINT_MAP.keys():
+            if self.constraint_iri.endswith(k):
+                return CONSTRAINT_MAP[k]
+        return None
+
+    def needs_quotes(self) -> bool:
+        return self.get_json_schema_name() not in NUMERIC_CONSTRAINTS
+
 
 class ShaclProperty(SemanticModelElement):
     SHAPE_QUERY = prepareQuery(
@@ -399,7 +485,151 @@ class ShaclProperty(SemanticModelElement):
         constraints.sort(key=lambda c: c.constraint_iri)
         return constraints
 
-    def get_nodeshapes(self):
+    def is_required(self):
+        constraints = self.get_constraints()
+        minCount = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("mincount"), constraints)
+        )
+        if len(minCount) == 1:
+            return int(minCount[0].value) >= 1
+        return False
+
+    def is_array(self):
+        constraints = self.get_constraints()
+        maxCount = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("maxcount"), constraints)
+        )
+        if len(maxCount) == 1:
+            return int(maxCount[0].value) > 1
+        return False
+
+    def get_json_schema_type(self) -> Tuple:
+        # would assume that property shape points to another nodeshape for object references,
+        # if it does not, we should try and find a suitable nodeshape in the model, which is ok
+        # if there is only one, but not if there are multiple nodeshapes in the same model
+        t = self.xsd_datatype()
+        if t is not None:
+            for k in TYPE_MAP.keys():
+                if t.lower().endswith(
+                    k.lower()
+                ):  # TODO: endswith is going to collide with names of classes!!
+                    # add format for date/time
+                    if k == "date":
+                        return (TYPE_MAP[k], "date")
+                    if k == "time":
+                        return (TYPE_MAP[k], "time")
+                    if k == "dateTime" or k == "dateTimeStamp":
+                        return (TYPE_MAP[k], "date-time")
+                    return (TYPE_MAP[k], None)
+            # must be an object reference, make sure we point to a NodeShape
+            # so JSON-SCHEMA tooling can resolve the $ref to that NodeShape's
+            # JSON-SCHEMA through Shapiro
+        t = self.class_datatype()
+        if t is not None:
+            return (self.get_nodeshape_for(t), None)
+        return None  # no mapping found, return None meaning no constraint is put in JSON-SCHEMA
+
+    def get_target_property(self) -> RdfProperty:
+        target_prop_iri = list(
+            filter(lambda c: c.constraint_iri.endswith("path"), self.get_constraints())
+        )[
+            0
+        ].value  # there must be one
+        return RdfProperty(target_prop_iri, self.graph)
+
+    def get_iri(self) -> str:
+        # if this SHACL property is a blank node, then return the iri of the target property, otherwise return the original iri of this property
+        if self.label == "unnamed":
+            return self.get_target_property().iri
+        return self.iri
+
+    def get_json_schema_name(self) -> str:
+        no_label = (
+            self.label is None
+            or self.label == ""
+            or self.label.lower() == "unnamed"
+            or self.label.lower() == "n/a"
+        )
+        if no_label is False:
+            return self.label
+        return self.get_target_property().label
+
+    def get_json_schema_comment(self) -> str:
+        no_comment = (
+            self.comment is None or self.comment == "" or self.comment.lower() == "n/a"
+        )
+        if no_comment is False:
+            return self.comment
+        return self.get_target_property().comment
+
+    def get_json_schema_array_item_constraints(self) -> List[ShaclConstraint]:
+        if self.is_array():
+            return list(
+                filter(
+                    lambda c: c.get_json_schema_name() in ARRAY_ITEM_CONSTRAINTS,
+                    self.get_constraints(),
+                )
+            )
+        return []
+
+    def get_nodeshape_for(self, iri: str) -> str:
+        s = SemanticModel(iri)
+        types = s.get_types()
+        nodeshapes = list(filter(lambda t: t.lower().endswith("nodeshape"), types))
+        if len(nodeshapes) > 0:
+            # iri is a nodeshape
+            return iri
+        classes = list(filter(lambda t: t.lower().endswith("class"), types))
+        if len(classes) > 0:
+            # iri is a class, find nodeshape with this class as targetclass in the model
+            clazz = RdfClass(iri, self.graph)
+            nodeshapes = clazz.get_nodeshapes()
+            l = len(nodeshapes)
+            if l > 1:
+                log.warn(
+                    "Found {} nodeshapes for class {}. Selecting {}.".format(
+                        l, iri, nodeshapes[0].iri
+                    )
+                )
+            if l > 0:
+                return nodeshapes[0].iri
+        return iri  # no nodeschape, so just reference the class as type
+
+    def xsd_datatype(self) -> str:
+        # TODO: what if multiple datatypes are defined?
+        constraints = self.get_constraints()
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints)
+        )
+        if len(datatype) == 1:  # must be simple type
+            return datatype[0].value
+        return None
+
+    def class_datatype(self) -> str:
+        # TODO: what if multiple datatypes are defined?
+        constraints = self.get_constraints()
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints)
+        )
+        if len(datatype) == 1:  # relationship to instances of another class
+            return datatype[0].value
+        return None
+
+    def is_object_reference(self) -> bool:
+        constraints = self.get_constraints()
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("datatype"), constraints)
+        )
+        if len(datatype) == 1:  # must be simple type
+            return False
+        datatype = list(
+            filter(lambda c: c.constraint_iri.lower().endswith("class"), constraints)
+        )
+        if len(datatype) == 1:  # relationship to instances of another class
+            return True
+        return False  # meaning we will not put any constraint in JSON-SCHEMA
+
+    def get_nodeshapes(self) -> List[NodeShape]:
         prop = None
         if urlparse(self.iri).scheme == "":  #  if this is a blank node
             prop = BNode(self.iri)

@@ -14,9 +14,12 @@ from shapiro_model import (
     SemanticModelElement,
     ShaclConstraint,
     ShaclProperty,
+    NodeShape
 )
 from shapiro_util import NotFoundException, prune_iri, get_logger
 import markdown as md
+import multiline
+from typing import List
 
 log = get_logger("SHAPIRO_RENDER")
 
@@ -29,15 +32,104 @@ def url(value: str) -> str:
 
 
 class JsonSchemaRenderer:
+    def __init__(self, template_path: str = "./templates"):
+        self.env = Environment(
+            tolerance=Mode.STRICT,
+            undefined=StrictUndefined,
+            loader=FileSystemLoader(template_path),
+        )
+
+    def convert_shacl_constraints(
+        self, shacl_constraints: List[ShaclConstraint]
+    ) -> List[dict]:
+        constraints = []
+        for c in shacl_constraints:
+            name = c.get_json_schema_name()
+            if name is not None:
+                constraints.append(
+                    {
+                        "name": name,
+                        "needs_quotes": c.needs_quotes(),
+                        "value": c.value,
+                    }
+                )
+        return constraints
     
-    def __init__(self):
-        pass
-    
-    def render_model(self, model_iri:str) -> str:
-        pass
-    
-    def render_nodeshape(self, model_iri:str) -> str:
-        pass    
+    def get_data_for_shape(self, shape: NodeShape) -> dict:
+        properties = (
+            []
+        )  # list of dicts with all information for each property, including constraints
+        for p in shape.get_shacl_properties():
+            name = p.get_json_schema_name()
+            jstype = p.get_json_schema_type()
+            type = None
+            format = None
+            if jstype is not None:
+                type = jstype[0]
+                format = jstype[1]
+            prop = {
+                "iri": p.get_iri(),
+                "type": type,
+                "format": format,
+                "is_object": p.is_object_reference(),
+                "is_array": p.is_array(),
+                "name": p.get_json_schema_name(),
+                "description": p.get_json_schema_comment(),
+                "is_required": p.is_required(),
+            }
+            prop["array_item_constraints"] = self.convert_shacl_constraints(
+                p.get_json_schema_array_item_constraints()
+            )
+            prop["array_item_constraint_count"] = len(prop["array_item_constraints"])
+            prop["constraints"] = []
+            for d1 in self.convert_shacl_constraints(p.get_constraints()):
+                is_array_item_constraint = False
+                for d2 in prop["array_item_constraints"]:
+                    if d1["name"] == d2["name"] and d1["value"] == d2["value"]:
+                        is_array_item_constraint = True
+                if not is_array_item_constraint and not (
+                    p.is_array() == False
+                    and (d1["name"] == "maxItems" or d1["name"] == "minItems")
+                ):
+                    prop["constraints"].append(d1)
+            prop["constraint_count"] = len(prop["constraints"])
+            properties.append(prop)
+        return properties        
+
+    def render_nodeshape(self, shape_iri: str) -> str:
+        log.info("Rendering JSON-SCHEMA for {}".format(shape_iri))
+        s = SemanticModel(shape_iri)
+        shape_list = s.get_node_shapes()
+        shapes = list(filter(lambda s: s.iri == shape_iri, shape_list))
+        content = None
+        if len(shapes) == 0 or len(shapes) > 1:
+            log.warn("{} shape(s) found for iri '{}'".format(
+                len(shapes), shape_iri
+            ))
+            content = self.env.get_template("render_model.jsonschema").render(
+                shape_iri=shape_iri,
+                shape_label=s.label,
+                shape_description=s.comment,
+                properties=[],
+                required=[],
+                required_count=0
+            )
+        else:
+            shape = shapes[0]
+            properties = self.get_data_for_shape(shape)
+            required = list(filter(lambda p: p["is_required"] == True, properties))
+            content = self.env.get_template("render_model.jsonschema").render(
+                shape_iri=shape_iri,
+                shape_label=shape.label,  # TODO: use target class label if shape label is empty
+                shape_description=shape.comment,  # TODO: use target class comment if shape comment is empty
+                properties=properties,
+                required=required,
+                required_count=len(required)
+            )
+        d = multiline.loads(content, multiline=True)  # this ensures template generated valid JSON...
+        return multiline.dumps(
+            d, indent=5
+        )  # ...and we can return properly formatted JSON (while keeping the template code readable)
 
 
 class HtmlRenderer:

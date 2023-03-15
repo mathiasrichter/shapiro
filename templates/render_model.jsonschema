@@ -1,0 +1,70 @@
+{
+    "$id": "{{shape_iri}}",
+    "title": "{{shape_label}}",
+    "description": "{{shape_description}}",
+    "type": "object",
+    "properties": 
+    { 
+        {% for p in properties %}
+            "{{p.name}}":
+            {
+                "$id": "{{p.iri}}",
+                "description": "{{p.description}}"
+                {% if p.is_array %}
+                    ,
+                    "type": "array"
+                    {% if p.is_object == true %}
+                        ,
+                        "items": { 
+                            "$ref": "{{p.type}}" 
+                        }
+                    {% else %}
+                        {% if p.type != null %}
+                            ,
+                            "items": { 
+                                "type": "{{p.type}}"
+                                {% if p.format != null %}
+                                    ,
+                                    "format": "{{p.format}}"
+                                {% endif %}
+                                {% if p.array_item_constraint_count > 0 %}
+                                    ,
+                                    {% for c in p.array_item_constraints %}
+                                        "{{c.name}}": 
+                                        {% if c.needs_quotes %}"{% endif %}{{c.value}}{% if c.needs_quotes %}"{% endif %}
+                                        {% if forloop.last == false %},{% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            }
+                        {% endif %}
+                    {% endif %}
+                {% elsif p.is_object %}
+                    ,
+                    "$ref" : "{{p.type}}"
+                {% elsif p.type != null %}
+                    ,
+                    "type": "{{p.type}}"
+                    {% if p.format != null %}
+                        ,
+                        "format": "{{p.format}}"
+                    {% endif %}
+                {% endif %}
+                {% if p.constraint_count > 0 %},{% endif %}
+                {% for c in p.constraints %}
+                    "{{c.name}}": 
+                    {% if c.needs_quotes %}"{% endif %}{{c.value}}{% if c.needs_quotes %}"{% endif %}
+                    {% if forloop.last == false %},{% endif %}
+                {% endfor %}
+            }
+            {% if forloop.last == false %},{% endif %}
+        {% endfor %}
+    }
+    {% if required_count > 0  %}
+        ,
+        "required": [
+            {% for r in required %}
+                "{{r.name}}"
+                {% if forloop.last == false %},{% endif %}
+            {% endfor %}
+    ]{% endif %}
+}

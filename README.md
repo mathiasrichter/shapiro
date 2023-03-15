@@ -12,6 +12,7 @@
   - [Motivation - Model as Code](#motivation---model-as-code)
   - [Serving Schemas](#serving-schemas)
     - [Content Negotiation](#content-negotiation)
+    - [Integration with JSON-Schema](#integration-with-json-schema)
     - [Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions](#markdown-in-rdfs-commentsskos-definitionsdct-descriptions)
     - [No URL fragments](#no-url-fragments)
   - [Hierarchical Namespaces](#hierarchical-namespaces)
@@ -19,6 +20,7 @@
   - [Validation with Shapiro](#validation-with-shapiro)
   - [Searching Shapiro](#searching-shapiro)
   - [Shapiro UI](#shapiro-ui)
+  - [Writing Semantic Models to be served by Shapiro](#writing-semantic-models-to-be-served-by-shapiro)
   - [Installing and running Shapiro](#installing-and-running-shapiro)
 
 ## What is Shapiro                                                      
@@ -48,9 +50,12 @@ Shapiro will use the `accept` header of the get request for a schema to determin
 | `application/ld+json`                      | implemented           |
 | `text/turtle`                              | implemented           |
 | `text/html`                                | implemented           |
-| `application/schema+json`                  | not yet implemented   |
+| `application/schema+json`                  | implemented           |
 
 If no accept header is specified, Shapiro will assume `text/turtle` as default.
+
+### Integration with JSON-Schema
+Shapiro converts Shacl nodeshapes into JSON-Schema and thereby integrates with JSON-Schema validation. Based on this, you can use the semantic datamodels served by Shapiro in your OpenAPI definitions (by way of $ref). An end to end example for an OpenAPI definition using a semantic model will come soon.
 
 ### Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions
 When rendering for mime type `text/html` Shapiro will consider markdown in RDFS comments, SKOS definitions, DCT descriptions for improved readability of documentation.
@@ -92,6 +97,13 @@ Shapiro uses Whoosh Full-text-search to index all schemas it serves. Shapiro reg
 ## Shapiro UI
 Shapiro provides a minimal UI available at `/welcome/`. Any `GET`request to `/` without a schema name to retrieve will also redirect to the UI. The ui lists all schemas served by Shapiro at a given point in time and allows to full-text-search schema content.
 The Shapiro UI also renders models/schemas/ontologies as HTML.
+
+## Writing Semantic Models to be served by Shapiro
+Given the number of possibilities to use ontologies & vocabularies for your models, Shapiro can't anticipate them all. While I'm trying to keep Shapiro as open as possible and while Shapiro can serve any kind of ontology or vocabulary, things like validation, HTML rendering of models and JSON-SCHEMA rendering of models work best if you keep the following in mind:
+
+- Use RDFS for modelling your classes and properties. HTML rendering will work best with this vocabulary. 
+- Use SHACL for constraints. Shapiro cannot validate your data against models, if you use anything else and it cannot convert semantic models to JSON-SCHEMA otherwise. Of course, Shapiro will also render SHACL constraints in HTML.
+- JSON-SCHEMA conversion requires your model defining NodeShapes with the appropriate SHACL properties and constraints. Shapiro will render empty schemas if you ask for JSON-SCHEMA of an RDFS class.
 
 ## Installing and running Shapiro
 1. Clone the Shapiro repository.

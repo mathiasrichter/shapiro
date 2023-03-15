@@ -1,0 +1,192 @@
+@prefix : <http://127.0.0.1:8000/com/example/org/model_for_jsonschema/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix schema: <http://schema.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# This is a model covering test cases for JSON-SCHEMA generation
+# from a semantic model.
+
+# Cases to cover:
+# 1. relationships in different cardinalities (0-1, 1, 0-n = optional array, 1-n required array)
+# 2. relationships with targets having no, single & multiple nodeshapes
+# 3. scalar properties for all xsd types (including those which justget translated to string in JSON schema)
+# 4. scalar properties for date/datatime/etc. (type string with format in json-schema)
+# 5. arrays of scalar types
+# 6. properties referencing other models (e.g. schema.org), where there is no type specified
+# 7. inheritance of classes
+# 8. documentation in nodeshapes and shacl properties vs documentation on the target classes and properties
+# 9. blank nodes as shacl properties vs names nodes as shacl properties
+
+:SimplePerson a rdfs:Class ;
+    rdfs:label "SimplePerson" ;
+    rdfs:comment "A person." ;
+.
+
+:SimpleAddress a rdfs:Class ;
+    rdfs:label "Address" ;
+    rdfs:comment "An address object." ;
+.
+
+:AnotherEntity a rdfs:Class ; 
+    rdfs:label "AnotherEntity" ;
+    rdfs:comment "An entity to test relationships to objects without nodeshapes."
+.
+
+:YetAnotherEntity a rdfs:Class ; 
+    rdfs:label "YetAnotherEntity" ;
+    rdfs:comment "An entity to test relationships to objects with multiple nodeshapes."
+.
+
+:YetAnotherEntityShape1 a sh:NodeShape ;
+    sh:targetClass :YetAnotherEntity ;
+.
+
+:YetAnotherEntityShape2 a sh:NodeShape ;
+    sh:targetClass :YetAnotherEntity ;
+.
+
+:SimplePersonName a rdfs:Property ;
+    rdfs:label "Name" ;
+    rdfs:comment "Name of a person" ;
+.
+
+:anotherEntity a rdfs:Property ;
+    rdfs:label "anotherEntity" ;
+    rdfs:comment "Relationship to another entity." ;
+.
+
+:yetAnotherEntity a rdfs:Property ;
+    rdfs:label "yetAnotherEntity" ;
+    rdfs:comment "Relationship to yet another entity." ;
+.
+
+:primaryAddress a rdfs:Property ;
+    rdfs:label "primaryAddress" ;
+    rdfs:comment "The primary address of a Person." ;
+.
+
+:secondaryAddress a rdfs:Property ;
+    rdfs:label "secondaryAddress" ;
+    rdfs:comment "The secondary address of a Person." ;
+.
+
+:tertiaryAddress a rdfs:Property ;
+    rdfs:label "tertiaryAddress" ;
+    rdfs:comment "The tertiary address of a Person." ;
+.
+
+:otherAddress a rdfs:Property ;
+    rdfs:label "otherAddress" ;
+    rdfs:comment "The other address of a Person." ;
+.
+
+:Age a rdfs:Property ;
+    rdfs:label "Age" ;
+    rdfs:comment "Age of a person" ;
+.
+
+:bornAtDateTimestamp a rdfs:Property ;
+    rdfs:label "bornAtDateTimestamp" ;
+    rdfs:comment "Timestamp of when the person was born" ;
+.
+
+:bornAtDateTime a rdfs:Property ;
+    rdfs:label "bornAtDateTime" ;
+    rdfs:comment "Date/Time of when the person was born" ;
+.
+
+:ShaclSchemaNameProperty a sh:Property ; # test case 9
+    rdfs:label "SchemaName" ;
+    sh:path schema:Name ; # test case 6
+    sh:minCount 0 ;
+    sh:maxCount 2 ;
+.
+
+:SomeDateProperty a rdfs:Property ;
+    rdfs:label "SomeDateProperty" ;
+    rdfs:comment "A property illustrating the use of a date."
+.
+
+:SimpleAddressShape a sh:NodeShape ;
+    sh:targetClass :SimpleAddress ;
+.
+
+:TestTypeTime a rdfs:Class .
+
+:hasTestTypeTime a rdfs:Property .
+
+:SimplePersonShape a sh:NodeShape ;
+    rdfs:label "SimplePerson" ; # test case 8 
+    rdfs:comment "Concrete shape of a simple person."; # test case 8
+    sh:targetClass :SimplePerson ;
+    sh:property [ # test case 3, 5, 9 (blank node)
+        sh:path :SimplePersonName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:maxCount 10;
+        sh:pattern "[A..Z]+"
+    ];
+    sh:property [ # test case 3, 9 (blank node)
+        sh:path :Age ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0;
+        sh:maxInclusive 140;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ];
+    sh:property :ShaclSchemaNameProperty ; # test case 6 and 9 (URI ref)
+    sh:property [
+        sh:path :SomeDateProperty ;
+        sh:datatype xsd:date ; # test case 4
+    ] ;
+    sh:property [ # test case 1 (cardinality 1), test case 2 (single nodeshape)
+        sh:path :primaryAddress ;
+        sh:class :SimpleAddress ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A person must have exactly one primary address." ;
+    ] ;
+    sh:property [ # test case 1 (cardinality 0 - 1), test case 2 (single nodeshape)
+        sh:path :secondaryAddress ;
+        sh:class :SimpleAddress ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "A person can have one secondary address." ;
+    ] ;
+    sh:property [ # test case 1 (cardinality 0 - n), test case 2 (single nodeshape)
+        sh:path :tertiaryAddress ;
+        sh:class :SimpleAddress ;
+        sh:minCount 0 ;
+        sh:maxCount 9999 ;
+        sh:message "A person can have zero or more tertiary addresses." ;
+    ] ;
+    sh:property [ # test case 1 (cardinality 1 - n), test case 2 (single nodeshape)
+        sh:path :otherAddress ;
+        sh:class :SimpleAddress ;
+        sh:minCount 1 ;
+        sh:maxCount 9999 ;
+        sh:message "A person must have one or more other addresses." ;
+    ] ;
+    sh:property [ # test case 2 (no nodeshape)
+        sh:path :anotherEntity ;
+        sh:class :AnotherEntity ;
+    ] ;
+    sh:property [ # test case 2 (multiple nodeshapes)
+        sh:path :yetAnotherEntity ;
+        sh:class :YetAnotherEntity ;
+    ] ;
+    sh:property [
+        sh:path :bornAtDateTimestamp ;
+        sh:datatype xsd:dateTimeStamp ;
+    ] ;
+    sh:property [
+        sh:path :bornAtDateTime ;
+        sh:datatype xsd:dateTime ;
+    ] ;
+    sh:property [ # test case 10 (no clashes between partial typenames of xsd types and classes)
+        sh:path :hasTestTypeTime ;
+        sh:class :TestTypeTime ;
+    ] ;
+.

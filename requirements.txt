@@ -12,3 +12,5 @@ python-liquid
 httpx
 markdown
 colorlog
+jsonschema
+multiline

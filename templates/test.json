@@ -1,0 +1,121 @@
+{
+    "$id": "http://127.0.0.1:8000/com/example/org/model_for_jsonschema/SimplePersonShape",
+    "title": "SimplePerson",
+    "description": "Concrete shape of a simple person.",
+    "type": "object",
+    "properties":
+    {
+
+            "SchemaName":
+            {
+                "$id": "http://127.0.0.1:8000/com/example/org/model_for_jsonschema/ShaclSchemaNameProperty",
+                "description": "n/a"
+
+                    ,
+                    "type": "array"
+
+
+
+
+                ,
+
+                    "maxItems":
+                    2
+                    ,
+
+                    "minItems":
+                    0
+
+
+            }
+            ,
+
+            "Name":
+            {
+                "$id": "http://127.0.0.1:8000/com/example/org/model_for_jsonschema/SimplePersonName",
+                "description": "Name of a person"
+
+                    ,
+                    "type": "array"
+
+
+                            "items": {
+                                "type": "string"
+
+
+                                    ,
+
+                                        "pattern":
+                                        "[A..Z]+"
+
+
+
+                            }
+
+
+
+                ,
+
+                    "maxItems":
+                    10
+                    ,
+
+                    "minItems":
+                    1
+
+
+            }
+            ,
+
+            "Age":
+            {
+                "$id": "http://127.0.0.1:8000/com/example/org/model_for_jsonschema/Age",
+                "description": "Age of a person"
+
+                    ,
+                    "type": "integer"
+
+
+                ,
+
+                    "maximum":
+                    140
+                    ,
+
+                    "minimum":
+                    0
+
+
+            }
+            ,
+
+            "SomeDateProperty":
+            {
+                "$id": "http://127.0.0.1:8000/com/example/org/model_for_jsonschema/SomeDateProperty",
+                "description": "A property illustrating the use of a date."
+
+                    ,
+                    "type": "string"
+
+                        ,
+                        "format": "date"
+
+
+
+
+            }
+
+
+    }
+
+        ,
+        "required": [
+
+                "Name"
+                ,
+
+                "Age"
+
+
+    ]
+}
