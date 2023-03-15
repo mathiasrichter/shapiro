@@ -33,13 +33,18 @@ MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
 MIME_TTL = "text/turtle"
 MIME_JSONSCHEMA = "application/schema+json"
-MIME_DEFAULT = MIME_TTL
+MIME_DEFAULT = MIME_JSONSCHEMA
 
 SUFFIX_JSONLD = ".jsonld"
 SUFFIX_TTL = ".ttl"
 SUPPORTED_SUFFIXES = [SUFFIX_JSONLD, SUFFIX_TTL]
 
-SUPPORTED_MIME_TYPES = [MIME_JSONLD.lower(), MIME_TTL.lower(), MIME_HTML.lower(), MIME_JSONSCHEMA.lower()]
+SUPPORTED_MIME_TYPES = [
+    MIME_JSONLD.lower(),
+    MIME_TTL.lower(),
+    MIME_HTML.lower(),
+    MIME_JSONSCHEMA.lower(),
+]
 
 IGNORE_NAMESPACES = []
 
@@ -721,7 +726,7 @@ def convert(path: str, filename: str, content: str, mime_type: str):
         log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
         return {
             "content": JSONSCHEMA_RENDERER.render_nodeshape(BASE_URL + path),
-            "mime_type": mime_type
+            "mime_type": mime_type,
         }
     log.warning(
         "No conversion possible for content path '{}' and mime type '{}'".format(
@@ -916,7 +921,7 @@ def get_args(argv=[]):
         help="""The mime type to use for formatting served ontologies if the mimetype in the accept header is not 
                 available or usable. Defaults to "text/turtle".""",
         type=str,
-        default="text/turtle",
+        default=MIME_DEFAULT,
     )
     parser.add_argument(
         "--features",

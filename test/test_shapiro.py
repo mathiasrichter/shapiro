@@ -9,6 +9,7 @@ from shapiro_render import JsonSchemaRenderer
 import subprocess
 from datetime import datetime
 import os
+from jsonschema import validate
 
 ###########################################################################################
 # for running with an html coverage report :
@@ -426,9 +427,39 @@ def test_get_existing_nodeshape_as_json_schema():
     response = client.get(
         "/com/example/org/person/PersonShape", headers={"accept": mime}
     )
-    response.json() # ensure JSON-SCHEMA generated is proper JSON
+    response.json()  # ensure JSON-SCHEMA generated is proper JSON
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
+
+
+def test_get_non_nodeshape_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get("/com/example/org/person/Person", headers={"accept": mime})
+    response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
+
+
+def test_complex_model_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "/com/example/org/model_for_jsonschema/SimplePersonShape",
+        headers={"accept": mime},
+    )
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
+    schema = response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    data = {
+        "Name": ["MATHIAS"],
+        "Age": 97,
+        "SchemaName": ["Mathias Richter"],
+        "primaryAddress": {"street": "1 Recursion Drive", "city": "Coderville"},
+        "otherAddress": [
+            {"street": "5 Left Join Street", "city": "Data City"},
+            {"street": "2 Coverage Boulevard", "city": "Test Town"},
+        ],
+    }
+    validate(data, schema)  # ensure data validates against schema
 
 
 def test_validate_with_compliant_jsonld_data():
