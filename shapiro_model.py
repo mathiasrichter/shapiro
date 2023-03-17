@@ -133,7 +133,7 @@ class SemanticModelElement(Subscriptable):
 
     def __init__(self, iri: str, graph: Graph = None):
         log.info("Initializing model for {}".format(iri))
-        self.iri = iri
+        self.iri = str(iri)  # ensure this is a string, may sometimes be a URIRef object
         self.graph = graph
         self.label, self.title, self.comment, self.description, self.definition = (
             "",
@@ -395,6 +395,19 @@ class RdfClass(SemanticModelElement):
                 """
     )
 
+    INSTANCE_QUERY = prepareQuery(
+        """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?instance
+                WHERE
+                {
+                    ?instance rdf:type ?clazz .
+                    ?clazz rdf:type rdfs:Class .
+                }
+                """
+    )
+
     def __init__(self, iri: str, graph: Graph):
         super().__init__(iri, graph)
 
@@ -427,6 +440,16 @@ class RdfClass(SemanticModelElement):
             shapes.append(NodeShape(str(r.shape), self.graph))
         shapes.sort(key=lambda c: c.label)
         return shapes
+
+    def get_instances(self) -> List["Instance"]:
+        result = self.graph.query(
+            self.INSTANCE_QUERY, initBindings={"clazz": URIRef(self.iri)}
+        )
+        instances = []
+        for r in result:
+            instances.append(Instance(r.instance, self.graph))
+        instances.sort(key=lambda c: c.label)
+        return instances
 
 
 class ShaclConstraint(Subscriptable):
@@ -643,6 +666,34 @@ class ShaclProperty(SemanticModelElement):
         return shapes
 
 
+class Instance(SemanticModelElement):
+    CLASS_QUERY = prepareQuery(
+        """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?clazz
+                WHERE
+                {
+                    ?instance rdf:type ?clazz .
+                    ?clazz rdf:type rdfs:Class .
+                }
+                """
+    )
+
+    def __init__(self, iri: str, graph: Graph):
+        super().__init__(iri, graph)
+
+    def get_classes(self) -> RdfClass:
+        result = self.graph.query(
+            self.CLASS_QUERY, initBindings={"instance": URIRef(self.iri)}
+        )
+        clazzes = []
+        for r in result:
+            clazzes.append(RdfClass(r.clazz, self.graph))
+        clazzes.sort(key=lambda c: c.label)
+        return clazzes
+
+
 class SemanticModel(SemanticModelElement):
     MODEL_DETAILS_QUERY = prepareQuery(
         """
@@ -686,6 +737,19 @@ class SemanticModel(SemanticModelElement):
                     { ?shape sh:property ?property }
                     UNION
                     { ?property rdf:type sh:Property }
+                }
+                """
+    )
+
+    INSTANCE_QUERY = prepareQuery(
+        """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?instance
+                WHERE
+                {
+                    ?instance rdf:type ?clazz .
+                    ?clazz rdf:type rdfs:Class .
                 }
                 """
     )
@@ -737,6 +801,21 @@ class SemanticModel(SemanticModelElement):
             classes.append(RdfClass(str(r.instance), self.graph))
         classes.sort(key=lambda c: c.label)
         return classes
+
+    def get_instances(self) -> List[Instance]:
+        result = self.graph.query(self.INSTANCE_QUERY)
+        instances = []
+        for r in result:
+            instances.append(Instance(r.instance, self.graph))
+        instances.sort(key=lambda c: c.label)
+        return instances
+
+    def is_instance(self, iri: str) -> bool:
+        result = self.graph.query(self.INSTANCE_QUERY)
+        for r in result:
+            if str(r.instance) == iri:
+                return True
+        return False
 
     def get_properties(self) -> List[RdfProperty]:
         result = self.get_instances_of_type(self.RDFS_PROPERTY, RdfProperty)
