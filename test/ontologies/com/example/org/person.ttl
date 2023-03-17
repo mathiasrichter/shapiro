@@ -46,6 +46,26 @@
   rdfs:domain :Person;
 .
 
+:Nationality a rdfs:Class ;
+  rdfs:label "Nationality" ;
+  rdfs:comment "The nation of which a person is citizen of."
+.
+
+:CH a :Nationality ;
+  rdfs:label "Switzerland" ;
+  rdfs:comment "Nationality of Swiss Citizens." ;
+.
+
+:DE a :Nationality ;
+  rdfs:label "Germany" ;
+  rdfs:comment "Nationality of German Citizens." ;
+.
+
+:US a :Nationality ;
+  rdfs:label "United States of America" ;
+  rdfs:comment "Nationality of US Citizens." ;
+.
+
 :PersonName a rdfs:Property ;
   rdfs:label "PersonName (RDFS)";
   dct:title "PersonName";

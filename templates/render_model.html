@@ -74,5 +74,30 @@
         {% else %}
         This model does not seem to define any RDFS properties.
         {% endif %}
+        <h3 class="mt-5">Instances</h3>
+        {% if instance_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Instance</th>
+                    <th class="th-sm">Class</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for i in instances %}
+            <tr>
+                <td><a href="{{i.iri}}">{{i.label}}</a></td>
+                <td>
+                    {% for c in instance_classes[i.iri] %}
+                    <a href="{{c.iri}}">{{c.label}}</a><br/>
+                    {% endfor %}
+                </td>
+                <td>{{i.comment | markdown}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This model does not seem to define any instances.
+        {% endif %}
     </div>
 </section>

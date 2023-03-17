@@ -215,6 +215,22 @@ def test_render_class():
     assert response.status_code == 200
 
 
+def test_render_class_with_instances():
+    mime_in = "text/html"
+    response = client.get(
+        "/com/example/org/person/Nationality", headers={"accept": mime_in}
+    )
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
+def test_render_instance():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/CH", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
 def test_render_shape():
     mime_in = "text/html"
     response = client.get(

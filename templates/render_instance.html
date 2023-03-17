@@ -1,0 +1,31 @@
+<section class="page-section pt-4 pb-4">
+    <div class="container">
+        <h2 class="mb-3"><span class="badge rounded-pill bg-primary">Instance</span> {{instance.label}}</h2>
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <tr>
+                <td class="fw-bolder">IRI</td>
+                <td><a href="{{instance.iri}}">{{instance.iri}}</a></td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td>{{instance.label}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td>
+                    {% for c in classes %}
+                        <a href="{{c.iri}}">{{c.label}}</a><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td>{{instance.comment | markdown}}</td>
+            </tr>
+            <tr>
+                <td class="fw-bolder">Defined in</td>
+                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+            </tr>
+        </table>
+    </div>
+</section>

@@ -60,5 +60,24 @@
         {% else %}
             This class does not seem to have any associated properties.
         {% endif %}
+        <h3 class="mt-5">Instances</h3>
+        {% if instance_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">Instance</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for i in instances %}
+            <tr>
+                <td><a href="{{i.iri}}">{{i.label}}</a></td>
+                <td>{{i.comment | markdown}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This class does not seem to have any instances defined in this model.
+        {% endif %}
    </div>
 </section>

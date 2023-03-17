@@ -14,7 +14,7 @@ from shapiro_model import (
     SemanticModelElement,
     ShaclConstraint,
     ShaclProperty,
-    NodeShape
+    NodeShape,
 )
 from shapiro_util import NotFoundException, prune_iri, get_logger
 import markdown as md
@@ -54,7 +54,7 @@ class JsonSchemaRenderer:
                     }
                 )
         return constraints
-    
+
     def get_data_for_shape(self, shape: NodeShape) -> dict:
         properties = (
             []
@@ -94,7 +94,7 @@ class JsonSchemaRenderer:
                     prop["constraints"].append(d1)
             prop["constraint_count"] = len(prop["constraints"])
             properties.append(prop)
-        return properties        
+        return properties
 
     def render_nodeshape(self, shape_iri: str) -> str:
         log.info("Rendering JSON-SCHEMA for {}".format(shape_iri))
@@ -103,16 +103,14 @@ class JsonSchemaRenderer:
         shapes = list(filter(lambda s: s.iri == shape_iri, shape_list))
         content = None
         if len(shapes) == 0 or len(shapes) > 1:
-            log.warn("{} shape(s) found for iri '{}'".format(
-                len(shapes), shape_iri
-            ))
+            log.warn("{} shape(s) found for iri '{}'".format(len(shapes), shape_iri))
             content = self.env.get_template("render_model.jsonschema").render(
                 shape_iri=shape_iri,
                 shape_label=s.label,
                 shape_description=s.comment,
                 properties=[],
                 required=[],
-                required_count=0
+                required_count=0,
             )
         else:
             shape = shapes[0]
@@ -124,9 +122,11 @@ class JsonSchemaRenderer:
                 shape_description=shape.comment,  # TODO: use target class comment if shape comment is empty
                 properties=properties,
                 required=required,
-                required_count=len(required)
+                required_count=len(required),
             )
-        d = multiline.loads(content, multiline=True)  # this ensures template generated valid JSON...
+        d = multiline.loads(
+            content, multiline=True
+        )  # this ensures template generated valid JSON...
         return multiline.dumps(
             d, indent=5
         )  # ...and we can return properly formatted JSON (while keeping the template code readable)
@@ -162,6 +162,11 @@ class HtmlRenderer:
         for k in model_details_keys:
             model_details_names[k] = prune_iri(k, True)
         model_details_count = len(model_details_keys)
+        instances = s.get_instances()
+        instance_count = len(instances)
+        instance_classes = {}
+        for i in instances:
+            instance_classes[i.iri] = i.get_classes()
         content = self.env.get_template("render_model.html").render(
             url=base_url,
             model=s,
@@ -175,6 +180,9 @@ class HtmlRenderer:
             shape_count=len(shape_list),
             properties=prop_list,
             property_count=len(prop_list),
+            instance_count=instance_count,
+            instances=instances,
+            instance_classes=instance_classes,
         )
         return self.render_page(base_url, content)
 
@@ -191,6 +199,8 @@ class HtmlRenderer:
                 content += self.render_nodeshape(base_url, s)
             elif t == s.SHACL_PROPERTY:
                 content += self.render_shacl_property(base_url, s)
+            elif s.is_instance(iri):
+                content += self.render_instance(base_url, s)
         if content == "" or content is None:
             msg = "Cannot render HTML for {} (element not found, or type of element could not be determined)".format(
                 iri
@@ -209,6 +219,8 @@ class HtmlRenderer:
                     prop_types[p.iri] = []
                     for t in p.get_property_type():
                         prop_types[p.iri].append(t)
+                instances = c.get_instances()
+                instance_count = len(instances)
                 return self.env.get_template("render_class.html").render(
                     url=base_url,
                     model=model,
@@ -220,6 +232,19 @@ class HtmlRenderer:
                     prop_types=prop_types,
                     superclasses=c.get_superclasses(),
                     shapes=c.get_nodeshapes(),
+                    instances=instances,
+                    instance_count=instance_count,
+                )
+
+    def render_instance(self, base_url: str, model: SemanticModel) -> str:
+        log.info("HTML rendering instance at {}".format(model.iri))
+        for i in model.get_instances():
+            if i.iri == model.iri:
+                return self.env.get_template("render_instance.html").render(
+                    url=base_url,
+                    model_iri=i.iri[0 : i.iri.rfind("/")],
+                    instance=i,
+                    classes=i.get_classes(),
                 )
 
     def render_property(self, base_url: str, model: SemanticModel) -> str:
