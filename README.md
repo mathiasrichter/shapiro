@@ -40,7 +40,7 @@ Start out with providing a toolset from developers for developers for formulatin
 In order to do so, you need a way to serve the models - this is where Shapiro comes in.
 
 ## Serving Schemas
-Shapiro serves schemas from a directory hierarchy in the file system (specifiec by the `content_dir`parameter at startup). Shapiro will regularly check new or modified schemas for syntax errors and exclude such "bad schemas" from getting served. Schemas can be moved into Shapiro's content_dir while it is running. This decouples the lifecycle for schemas from the lifecycle of Shapiro - the basic idea being that the lifecycle of schemas is managed in some code repository where changes get pushed into Shapiro's content directory without Shapiro having to be restarted.
+Shapiro serves schemas from a directory hierarchy in the file system (specified by the `content_dir`parameter at startup). Shapiro will regularly check new or modified schemas for syntax errors and exclude such "bad schemas" from getting served. Schemas can be moved into Shapiro's content_dir while it is running. This decouples the lifecycle for schemas from the lifecycle of Shapiro - the basic idea being that the lifecycle of schemas is managed in some code repository where changes get pushed into Shapiro's content directory without Shapiro having to be restarted.
 
 ### Content Negotiation
 Shapiro will use the `accept` header of the get request for a schema to determine the mime type of its response, independent of the format that Shapiro holds the schema in on its file system:
