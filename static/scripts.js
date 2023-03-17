@@ -194,6 +194,11 @@ var codeIconButton = function(link)
 
 var viewCode = function(link)
 {
+    $.ajaxSetup({
+        headers:{
+           'Accept': "text/turtle"
+        }
+     });    
     $.get( link, function( data ) {
         $("#codeModalTitle").html(link.substring(window.location.origin.length, link.length))
         code = Prism.highlight(data, Prism.languages.turtle, 'turtle')
