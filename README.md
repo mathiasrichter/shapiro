@@ -12,7 +12,7 @@
   - [Motivation - Model as Code](#motivation---model-as-code)
   - [Serving Schemas](#serving-schemas)
     - [Content Negotiation](#content-negotiation)
-    - [Integration with JSON-Schema](#integration-with-json-schema)
+    - [Integration with OpenAPI \& JSON-Schema](#integration-with-openapi--json-schema)
     - [Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions](#markdown-in-rdfs-commentsskos-definitionsdct-descriptions)
     - [No URL fragments](#no-url-fragments)
   - [Hierarchical Namespaces](#hierarchical-namespaces)
@@ -54,8 +54,8 @@ Shapiro will use the `accept` header of the get request for a schema to determin
 
 If no accept header is specified, Shapiro will assume `text/turtle` as default.
 
-### Integration with JSON-Schema
-Shapiro converts Shacl nodeshapes into JSON-Schema and thereby integrates with JSON-Schema validation. Based on this, you can use the semantic datamodels served by Shapiro in your OpenAPI definitions (by way of $ref). An end to end example for an OpenAPI definition using a semantic model will come soon.
+### Integration with OpenAPI & JSON-Schema
+Shapiro converts Shacl nodeshapes into JSON-Schema and thereby integrates with JSON-Schema validation. Based on this, you can use the semantic datamodels served by Shapiro in your OpenAPI definitions (by way of $ref). An end to end example based on [this OpenAPI tutorial](https://support.smartbear.com/swaggerhub/docs/tutorials/openapi-3-tutorial.html) can be found in `test/openapi/tutorial.yaml` where the corresponding semantic model is at `test/openapi/tutorial/artist.ttl`.
 
 ### Markdown in RDFS Comments/SKOS Definitions/DCT Descriptions
 When rendering for mime type `text/html` Shapiro will consider markdown in RDFS comments, SKOS definitions, DCT descriptions for improved readability of documentation.
@@ -102,6 +102,7 @@ The Shapiro UI also renders models/schemas/ontologies as HTML.
 Given the number of possibilities to use ontologies & vocabularies for your models, Shapiro can't anticipate them all. While I'm trying to keep Shapiro as open as possible and while Shapiro can serve any kind of ontology or vocabulary, things like validation, HTML rendering of models and JSON-SCHEMA rendering of models work best if you keep the following in mind:
 
 - Use RDFS for modelling your classes and properties. HTML rendering will work best with this vocabulary. 
+- Use RDFS labels that are acceptable object names resp. property names in programming languages (specifically when you use JSON-SCHEMA & OpenAPI in conjunction with schemas hosted by Shapiro)
 - Use SHACL for constraints. Shapiro cannot validate your data against models, if you use anything else and it cannot convert semantic models to JSON-SCHEMA otherwise. Of course, Shapiro will also render SHACL constraints in HTML.
 - JSON-SCHEMA conversion requires your model defining NodeShapes with the appropriate SHACL properties and constraints. Shapiro will render empty schemas if you ask for JSON-SCHEMA of an RDFS class.
 

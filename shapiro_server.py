@@ -465,6 +465,8 @@ def get_schema(
             schema_path
         )
         log.error(err_msg)
+        if accept_header is None:
+            accept_header = ""
         if MIME_HTML.lower() in accept_header.lower():
             return Response(
                 env.get_template("error.html").render(url=BASE_URL, msg=err_msg),

@@ -1,0 +1,133 @@
+@prefix : <http://127.0.0.1:8000/openapi/tutorial/artist/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:<http://www.w3.org/2004/02/skos/core#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://127.0.0.1:8000/openapi/tutorial/artist> a owl:Ontology ;
+  dct:format <http://publications.europa.eu/resource/authority/file-type/RDF_TURTLE> ;
+  dct:creator "Mathias.richter@gmail.com" ;
+  dct:created "2023-03-18"^^xsd:date ;
+  dct:publisher <http://example.org/mathiasrichter> ;
+  rdfs:label "Artist Model" ;
+  rdfs:comment "A semantic model for the Swagger OpenAPI tutorial." ;
+.
+
+######################################################
+#
+# 400Error Definition
+#
+######################################################
+
+:400Error a rdfs:Class ;
+    rdfs:label "400Error" ;
+    rdfs:comment "A HTTP 400 Error message." ;
+.
+
+:message a rdfs:Property ;
+    rdfs:label "message" ;
+    rdfs:comment "The message describing an error." ;
+    rdfs:range xsd:string ;
+    rdfs:domain :400Error ;
+.
+
+:400ErrorShape a sh:NodeShape ;
+    rdfs:label "400Error" ;
+    sh:targetClass :400Error ;
+    sh:property [
+        sh:path :message ;
+        sh:datatype xsd:string ;
+    ] ;
+.
+
+######################################################
+#
+# Artist (Classes, Properties, Nodeshapes)
+#
+######################################################
+
+:Artist a rdfs:Class ;
+    rdfs:label "Artist" ;
+    rdfs:comment "An artist as used in the Swagger Open API Tutorial." ;
+.
+
+:ArtistCollection a rdfs:Class ;
+    rdfs:label "ArtistCollection" ;
+    rdfs:comment "A collection of artists." ;
+.
+
+:artists a rdfs:Property ;
+    rdfs:label "artists" ;
+    rdfs:comment "A collection of artists." ;
+    rdfs:range :Artist ;
+    rdfs:domain :ArtistCollection ;
+.
+
+:artist_name a rdfs:Property ;
+    rdfs:label "artist_name" ;
+    rdfs:comment "The name of the artist." ;
+    rdfs:range xsd:string ;
+    rdfs:domain :Artist ;
+.
+
+:username a rdfs:Property ;
+    rdfs:label "username" ;
+    rdfs:comment "The username of an artist." ;
+    rdfs:range xsd:string ;
+    rdfs:domain :Artist ;
+.
+
+:artist_genre a rdfs:Property ;
+    rdfs:label "artist_genre" ;
+    rdfs:comment "The genre of an artist." ;
+    rdfs:range xsd:string ;
+    rdfs:domain :Artist ;
+.
+
+:albums_recorded a rdfs:Property ;
+    rdfs:label "albums_recorded" ;
+    rdfs:comment "The number of albums recorded by the artist." ;
+    rdfs:range xsd:integer ;
+    rdfs:domain :Artist ;
+.
+
+:ArtistShape a sh:NodeShape ;
+    sh:targetClass :Artist ;
+    rdfs:label "Artist" ;
+    sh:property [
+        sh:path :artist_name ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path :username ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:maxCount 1;
+    ] ;
+    sh:property [
+        sh:path :artist_name ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path :artist_genre ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path :albums_recorded ;
+        sh:datatype xsd:integer ;
+    ] ;
+.
+
+:ArtistCollectionShape a sh:NodeShape ;
+    rdfs:label "ArtistCollection" ;
+    sh:targetClass :Artist ;
+    sh:property [
+        sh:path :artists ;
+        sh:class :Artist ;
+        sh:minCount 0;
+        sh:maxCount 999999;
+    ] ;
+.

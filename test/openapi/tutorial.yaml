@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   version: 1.0.0
   title: Simple API
-  description: A simple API to illustrate OpenAPI concepts with semantic models served by Shapiro.
+  description: A simple API to illustrate OpenAPI concepts with semantic models served by Shapiro, based on https://support.smartbear.com/swaggerhub/docs/tutorials/openapi-3-tutorial.html
 
 servers:
   - url: https://example.io/v1
@@ -23,9 +23,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Artist'
+                $ref: 'http://127.0.0.1:8000/openapi/tutorial/artist/ArtistCollectionShape'
         '400':
           $ref: '#/components/responses/400Error'
 
@@ -36,7 +34,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Artist'
+              $ref: 'http://127.0.0.1:8000/openapi/tutorial/artist/Artist'
       responses:
         '200':
           description: Successfully created a new artist
@@ -59,14 +57,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  artist_name:
-                    type: string
-                  artist_genre:
-                    type: string
-                  albums_recorded:
-                    type: integer
+                $ref: 'http://127.0.0.1:8000/openapi/tutorial/artist/Artist'
                 
         '400':
           $ref: '#/components/responses/400Error'
@@ -76,21 +67,6 @@ components:
     BasicAuth:
       type: http
       scheme: basic
-
-  schemas:
-    Artist:
-      type: object
-      required:
-        - username
-      properties:
-        artist_name:
-          type: string
-        artist_genre:
-            type: string
-        albums_recorded:
-            type: integer
-        username:
-            type: string
 
   parameters:
     PageLimit:
@@ -113,8 +89,4 @@ components:
       content:
         application/json:
           schema:
-            type: object 
-            properties:
-              message:
-                type: string
-  
+            $ref: 'http://127.0.0.1:8000/openapi/tutorial/artist/400ErrorShape'
