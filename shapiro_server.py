@@ -725,7 +725,7 @@ def convert(path: str, filename: str, content: str, mime_type: str):
                 )
             )
             return {"content": content, "mime_type": mime_type}
-    if mime_type == MIME_JSONSCHEMA or MIME_JSON:
+    if mime_type == MIME_JSONSCHEMA or mime_type == MIME_JSON:
         log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
         return {
             "content": JSONSCHEMA_RENDERER.render_nodeshape(BASE_URL + path),
