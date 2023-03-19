@@ -45,14 +45,15 @@ Shapiro serves schemas from a directory hierarchy in the file system (specified 
 ### Content Negotiation
 Shapiro will use the `accept` header of the get request for a schema to determine the mime type of its response, independent of the format that Shapiro holds the schema in on its file system:
 
-| Request Accept Header & Response Mime Type | Implementation Status |
-|:-------------------------------------------|:----------------------|
-| `application/ld+json`                      | implemented           |
-| `text/turtle`                              | implemented           |
-| `text/html`                                | implemented           |
-| `application/schema+json`                  | implemented           |
+| Request Accept Header & Response Mime Type | Implementation Status                 |
+|:-------------------------------------------|:--------------------------------------|
+| `application/ld+json`                      | implemented                           |
+| `text/turtle`                              | implemented                           |
+| `text/html`                                | implemented                           |
+| `application/schema+json`                  | implemented                           |
+| `application/json`                         | implemented (will return JSON-SCHEMA) |
 
-If no accept header is specified, Shapiro will assume `text/turtle` as default.
+If no accept header is specified, Shapiro will assume `application/schema+json` as default, because many JSON-SCHEMA processors/validators do not properly set the accept header when resolving $ref URLs.
 
 ### Integration with OpenAPI & JSON-Schema
 Shapiro converts Shacl nodeshapes into JSON-Schema and thereby integrates with JSON-Schema validation. Based on this, you can use the semantic datamodels served by Shapiro in your OpenAPI definitions (by way of $ref). An end to end example based on [this OpenAPI tutorial](https://support.smartbear.com/swaggerhub/docs/tutorials/openapi-3-tutorial.html) can be found in `test/openapi/tutorial.yaml` where the corresponding semantic model is at `test/openapi/tutorial/artist.ttl`.
