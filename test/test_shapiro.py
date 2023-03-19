@@ -636,7 +636,7 @@ def test_validate_with_remote_schema():
         response = client.post(
             "/validate/www.w3.org/2000/01/rdf-schema",
             content=data_file.read(),
-            headers={"content-type": shapiro_server.MIME_JSONLD},
+            headers={"content-type": shapiro_server.MIME_JSONLD}
         )
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
