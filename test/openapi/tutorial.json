@@ -1,0 +1,137 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Simple API",
+        "description": "A simple API to illustrate OpenAPI concepts with semantic models served by Shapiro, based on https://support.smartbear.com/swaggerhub/docs/tutorials/openapi-3-tutorial.html"
+    },
+    "servers": [
+        {
+            "url": "https://example.io/v1"
+        }
+    ],
+    "security": [
+        {
+            "BasicAuth": []
+        }
+    ],
+    "paths": {
+        "/artists": {
+            "get": {
+                "description": "Returns a list of artists",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PageLimit"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PageOffset"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully returned a list of artists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "http://127.0.0.1:8000/openapi/tutorial/artist/ArtistCollectionShape"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/400Error"
+                    }
+                }
+            },
+            "post": {
+                "description": "Lets a user post a new artist",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "http://127.0.0.1:8000/openapi/tutorial/artist/Artist"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully created a new artist"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/400Error"
+                    }
+                }
+            }
+        },
+        "/artists/{username}": {
+            "get": {
+                "description": "Obtain information about an artist from his or her unique username",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully returned an artist",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "http://127.0.0.1:8000/openapi/tutorial/artist/Artist"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/400Error"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "BasicAuth": {
+                "type": "http",
+                "scheme": "basic"
+            }
+        },
+        "parameters": {
+            "PageLimit": {
+                "name": "limit",
+                "in": "query",
+                "description": "Limits the number of items on a page",
+                "schema": {
+                    "type": "integer"
+                }
+            },
+            "PageOffset": {
+                "name": "offset",
+                "in": "query",
+                "description": "Specifies the page number of the artists to be displayed",
+                "schema": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses": {
+            "400Error": {
+                "description": "Invalid request",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "http://127.0.0.1:8000/openapi/tutorial/artist/400ErrorShape"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -33,6 +33,7 @@ MIME_HTML = "text/html"
 MIME_JSONLD = "application/ld+json"
 MIME_TTL = "text/turtle"
 MIME_JSONSCHEMA = "application/schema+json"
+MIME_JSON = "application/json"
 MIME_DEFAULT = MIME_JSONSCHEMA
 
 SUFFIX_JSONLD = ".jsonld"
@@ -724,7 +725,7 @@ def convert(path: str, filename: str, content: str, mime_type: str):
                 )
             )
             return {"content": content, "mime_type": mime_type}
-    if mime_type == MIME_JSONSCHEMA:
+    if mime_type == MIME_JSONSCHEMA or MIME_JSON:
         log.info("Converting '{}' to mime type '{}'".format(filename, mime_type))
         return {
             "content": JSONSCHEMA_RENDERER.render_nodeshape(BASE_URL + path),
