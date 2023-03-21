@@ -1,7 +1,7 @@
 @prefix : <http://127.0.0.1:8000/com/example/org/otherModel/> .
 @prefix p: <http://127.0.0.1:8000/com/example/org/person/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
 :SomeInstance a p:SomeClass ;
     rdfs:label "SomeInstance" ;
     rdfs:comment "An instance of SomeClass, where the class is defined in another model." ;
@@ -11,4 +11,21 @@
     rdfs:subClassOf p:SomeClass ;
     rdfs:label "SomeSubclass" ;
     rdfs:comment "A subclass of SomeClass, where the superclass is defined in another model." ;
+.
+
+:SomeOwlClass a owl:Class ;
+    rdfs:label "SomeOwlClass" ;
+    rdfs:comment "An OWL class to test how Shapiro displays that as a class and not as an instance." ;
+.
+
+:SomeClassSubClass a rdfs:Class ;
+    rdfs:subClassOf rdfs:Class ;
+    rdfs:label "SomeClassSubClass" ;
+    rdfs:comment "A class to test how Shapiro displays subclasses of rdfs Class." ;
+.
+
+:SomeClassSubClassSubClass a rdfs:Class ;
+    rdfs:subClassOf p:SomeClassSubClass ;
+    rdfs:label "SomeClassSubClassSubClass" ;
+    rdfs:comment "A class to test how Shapiro displays subclasses of subclasses of rdfs Class." ;
 .

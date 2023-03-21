@@ -97,6 +97,7 @@ class Subscriptable:
 
 class SemanticModelElement(Subscriptable):
     RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
+    OWL_CLASS = "http://www.w3.org/2002/07/owl#Class"
     RDF_PROPERTY = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
     RDFS_PROPERTY = "http://www.w3.org/2000/01/rdf-schema#Property"
     SHACL_NODESHAPE = "http://www.w3.org/ns/shacl#NodeShape"
@@ -715,10 +716,17 @@ class SemanticModel(SemanticModelElement):
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX sh:  <http://www.w3.org/ns/shacl#>
+                PREFIX owl: <http://www.w3.org/2002/07/owl#> 
                 SELECT DISTINCT ?instance
                 WHERE
                 {
-                    ?instance rdf:type rdfs:Class .
+                    {
+                        {?instance rdf:type rdfs:Class .}
+                        UNION 
+                        { ?instance rdf:type owl:Class . }
+                        UNION
+                        {?instance rdfs:subClassOf rdfs:Class .}
+                    }
                     MINUS {
                         ?instance rdf:type rdf:Property .                        
                         ?instance rdf:type rdfs:Property .
@@ -755,12 +763,27 @@ class SemanticModel(SemanticModelElement):
                     ?instance rdf:type ?clazz .
                     MINUS
                     {
-                        OPTIONAL { ?instance rdf:type rdfs:Class . }
-                        OPTIONAL { ?instance rdf:type rdf:Property . }
-                        OPTIONAL { ?instance rdf:type rdfs:Property . }
-                        OPTIONAL { ?instance rdf:type owl:Class . }
-                        OPTIONAL { ?instance rdf:type sh:Nodeshape . }
-                        OPTIONAL { ?instance rdf:type sh:Property . }
+                          ?instance rdf:type rdfs:Class .
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type rdf:Property . 
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type rdfs:Property . 
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type owl:Class . 
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type sh:Nodeshape . 
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type sh:Property . 
                     }
                 }
                 """

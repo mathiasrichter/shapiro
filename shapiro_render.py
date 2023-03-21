@@ -191,7 +191,7 @@ class HtmlRenderer:
         s = SemanticModel(iri)
         content = ""
         for t in s.get_types_of_instance(iri):
-            if t == s.RDFS_CLASS:
+            if t == s.RDFS_CLASS or t == s.OWL_CLASS:
                 content += self.render_class(base_url, s)
             elif t == s.RDFS_PROPERTY or t == s.RDF_PROPERTY:
                 content += self.render_property(base_url, s)

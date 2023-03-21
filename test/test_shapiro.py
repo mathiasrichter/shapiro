@@ -213,7 +213,18 @@ def test_render_class():
     response = client.get("/com/example/org/person/Person", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
+    
+def test_render_owl_class():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/otherModel/SomeOwlClass", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
 
+def test_render_instance():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/otherModel/SomeInstance", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
 
 def test_render_class_with_instances():
     mime_in = "text/html"
