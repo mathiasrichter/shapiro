@@ -46,6 +46,11 @@
   rdfs:domain :Person;
 .
 
+:SomeClass a rdfs:Class ;
+  rdfs:label "SomeClass" ;
+  rdfs:comment "To illustrate instances living in another model than the class." ;
+.
+
 :Nationality a rdfs:Class ;
   rdfs:label "Nationality" ;
   rdfs:comment "The nation of which a person is citizen of."

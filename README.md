@@ -25,7 +25,7 @@
   - [Installing and running Shapiro](#installing-and-running-shapiro)
 
 ## What is Shapiro                                                      
-Shapiro is a simple ontology/vocabulary server serving turtle, json-ld or html (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies/vocabularies.
+Shapiro is a simple ontology/vocabulary server serving turtle, json-ld, html or json-schema (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies/vocabularies.
 
 ## Motivation - Model as Code
 Why would one need something like Shapiro? The basic idea is to model data as knowledge graphs using Turtle or JSON-LD and use these models in API definitions/implementations and all other code consuming data based on these models.

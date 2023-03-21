@@ -671,11 +671,13 @@ class Instance(SemanticModelElement):
         """
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX owl: <http://www.w3.org/2002/07/owl#> 
+                PREFIX sh:<http://www.w3.org/ns/shacl#>
                 SELECT DISTINCT ?clazz
                 WHERE
                 {
                     ?instance rdf:type ?clazz .
-                    ?clazz rdf:type rdfs:Class .
+                    ?class rdf:type rdfs:Class
                 }
                 """
     )
@@ -745,11 +747,21 @@ class SemanticModel(SemanticModelElement):
         """
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX owl: <http://www.w3.org/2002/07/owl#> 
+                PREFIX sh:  <http://www.w3.org/ns/shacl#>
                 SELECT DISTINCT ?instance
                 WHERE
                 {
                     ?instance rdf:type ?clazz .
-                    ?clazz rdf:type rdfs:Class .
+                    MINUS
+                    {
+                        OPTIONAL { ?instance rdf:type rdfs:Class . }
+                        OPTIONAL { ?instance rdf:type rdf:Property . }
+                        OPTIONAL { ?instance rdf:type rdfs:Property . }
+                        OPTIONAL { ?instance rdf:type owl:Class . }
+                        OPTIONAL { ?instance rdf:type sh:Nodeshape . }
+                        OPTIONAL { ?instance rdf:type sh:Property . }
+                    }
                 }
                 """
     )
