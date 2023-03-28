@@ -193,6 +193,11 @@ def test_render_model():
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
 
+def test_render_model_with_trailing_slash():
+    mime_in = "text/html"
+    response = client.get("/com/example/org/person/", headers={"accept": mime_in})
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
 
 def test_render_model_with_ontology_url_fragment():
     mime_in = "text/html"

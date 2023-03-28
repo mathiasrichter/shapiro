@@ -454,6 +454,8 @@ def get_schema(
             schema_path, accept_header
         )
     )
+    if schema_path.endswith("/"):
+        schema_path = schema_path[0:len(schema_path)-1]
     try:
         result = resolve(accept_header, schema_path)
         if result is None:
