@@ -46,6 +46,16 @@
   rdfs:domain :Person;
 .
 
+:A a rdfs:Class .
+
+:B a rdfs:Class ;
+  rdfs:subClassOf :A;
+.
+
+:C a rdfs:Class ;
+  rdfs:subClassOf :B;
+.
+
 :SomeClass a rdfs:Class ;
   rdfs:label "SomeClass" ;
   rdfs:comment "To illustrate instances living in another model than the class." ;

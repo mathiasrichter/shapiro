@@ -1,0 +1,135 @@
+@prefix : <http://127.0.0.1:8000/com/example/org/multiple_nodeshapes_inherit_conflict/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+<http://127.0.0.1:8000/com/example/org/multiple_nodeshapes_inherit_conflict> a owl:Ontology ;
+    rdfs:label "Multiple NodeShapes with conflicting definitions and Inheritance" ;
+    rdfs:comment """An example to see how inheritance and multiple, conflicting nodeshapes for the 
+                    same target class sits with Shapiro's JSON-SCHEMA generation. This example defines both the 
+                    schema graph and the data graph.""" ;
+.
+
+:A a rdfs:Class ;
+    rdfs:label "A" ;
+.
+
+:B a rdfs:Class ;
+    rdfs:label "B" ;
+    rdfs:comment "B is a subclass of A." ;
+    rdfs:subClassOf :A ;
+.
+
+:C a rdfs:Class ;
+    rdfs:label "C" ;
+    rdfs:comment "C is a subclass of B (which is a subclass of A)." ;
+    rdfs:subClassOf :B ;
+.
+
+:P1 a rdfs:Property ;
+    rdfs:label "P1" ;
+.
+
+:P2 a rdfs:Property ;
+    rdfs:label "P2" ;
+.
+
+:P3 a rdfs:Property ;
+    rdfs:label "P3" ;
+.
+
+:P4 a rdfs:Property ;
+    rdfs:label "P4" ;
+.
+
+:AShape a sh:NodeShape ;
+    sh:targetClass :A ;
+    rdfs:label "AShape" ;
+    sh:property [
+        sh:path :P1 ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:maxCount 1;
+        sh:minLength 5;
+        sh:maxLength 5;
+        sh:message "AShape: P1 is required and must have a string value of length 5."
+    ] ;
+    sh:property [
+        sh:path :P2 ;
+        sh:datatype xsd:integer ;
+        sh:minCount 2;
+        sh:message "AShape: P2 must have at least 2 integer values."
+    ] ;
+.
+
+:AShapeConflict a sh:NodeShape ;
+    sh:targetClass :A ;
+    rdfs:label "AShapeConflict" ;
+    rdfs:comment "A nodeshape with conflicting property definitions." ;
+    sh:property [
+        rdfs:comment "Same datatype as in AShape, but different constraints." ;
+        sh:path :P1 ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:pattern "EXACTVALUE" ;
+        sh:message "AShapeConflict: P1 is required and must have value 'EXACTVALUE'." ;
+    ] ;
+    sh:property [
+        rdfs:comment "Different datatype as in AShape and different constraints." ;
+        sh:path :P2 ;
+        sh:datatype xsd:string ;
+        sh:minCount 1;
+        sh:message "AShapeConflict: P2 is required and must have a string value." ;
+    ] ;
+.
+
+:BShape a sh:NodeShape ;
+    sh:targetClass :B ;
+    rdfs:label "BShape" ;
+    sh:property [
+        sh:path :P3 ;
+        sh:datatype xsd:boolean ;
+        sh:minCount 1;
+        sh:message "BShape: P3 must have at least one boolean value." ;
+    ] ;
+.
+
+:CShape a sh:NodeShape ;
+    sh:targetClass :C ;
+    rdfs:label "CShape" ;
+    sh:property [
+        sh:path :P4 ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1;
+        sh:message "CShape: P4 must have at least one decimal value." ;
+    ] ;
+.
+
+:AInstance1 a :A ;
+    rdfs:comment "P1 defined correctly as per AShape, P2 defined correctly as per AShapeConflict. In result this violates both AShape and AShapeConflict." ;
+    :P1 "abcde" ;
+    :P2 "alphalfa" ;
+.
+
+:AInstance2 a :A ;
+    rdfs:comment "P1 defined correctly as per AShape, P2 defined correctly as per AShape. In result this conforms with AShape and violates AShapeConflict." ;
+    :P1 "abcde" ;
+    :P2 24, 42 ;
+.
+
+:AInstance3 a :A ;
+    rdfs:comment "P1 defined correctly as per AShapeConflict, P2 defined correctly as per AShapeConflict. In result this violates AShape and conforms with AShapeConflict." ;
+    :P1 "EXACTVALUE" ;
+    :P2 "alphalfa" ;
+.
+
+:CInstance1 a :C ;
+    rdfs:comment "Conforms with AShape, does not conform with AShapeConflict, conforms with BShape and CShape.";
+    :P1 "abcde" ;
+    :P2 24, 42 ;
+    :P3 "true"^^xsd:boolean ;
+    :P4 1.2345 ;
+.
+

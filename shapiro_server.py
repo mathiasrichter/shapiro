@@ -26,7 +26,7 @@ from liquid import Mode
 from liquid import StrictUndefined
 from liquid import FileSystemLoader
 from shapiro_render import HtmlRenderer, JsonSchemaRenderer
-from shapiro_util import BadSchemaException, NotFoundException, get_logger
+from shapiro_util import BadSchemaException, NotFoundException, ConflictingPropertyException, get_logger
 from multiprocessing import Process
 
 MIME_HTML = "text/html"
@@ -488,6 +488,17 @@ def get_schema(
         else:
             return JSONResponse(
                 content={"err_msg": x.content}, status_code=status.HTTP_404_NOT_FOUND
+            )
+    except ConflictingPropertyException as x:
+        if MIME_HTML.lower() in accept_header.lower():
+            return Response(
+                env.get_template("error.html").render(url=BASE_URL, msg=str(x)),
+                media_type="text/html",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        else:
+            return JSONResponse(
+                content={"err_msg": str(x)}, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
 

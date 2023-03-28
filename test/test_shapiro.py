@@ -458,6 +458,26 @@ def test_get_existing_nodeshape_as_json_schema():
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
+def test_get_existing_nodeshape_with_inheritance_conflict_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "/com/example/org/multiple_nodeshapes_inherit_conflict/CShape", headers={"accept": mime}
+    )
+    assert response.status_code == 422
+
+
+def test_get_existing_nodeshape_with_inheritance_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "/com/example/org/nodeshapes_inheritance/CShape", headers={"accept": mime}
+    )
+    result = response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith(mime)
+    assert len(result["required"]) == 4
+    assert "P1" in result["required"] and "P2" in result["required"] and "P3" in result["required"] and "P4" in result["required"]
+    assert len(result["properties"]) == 4
+    assert "P1" in result["properties"].keys() and "P2" in result["properties"].keys() and "P3" in result["properties"].keys() and "P4" in result["properties"].keys()
 
 def test_get_non_nodeshape_as_json_schema():
     mime = "application/schema+json"

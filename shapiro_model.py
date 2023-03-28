@@ -331,6 +331,21 @@ class NodeShape(SemanticModelElement):
     def __init__(self, iri: str, graph: Graph):
         super().__init__(iri, graph)
 
+    def get_inherited_shacl_properties(self):
+        # need to get the full set of (transitive) superclasses,
+        # find a NodeShape for the class and get the properties from
+        # that shape. need to be lenient, ie. if there's no nodeshape,
+        # the set is empty, it's not a failure.
+        clazzes = set()
+        properties = []
+        for c in self.get_classes():
+            clazzes = clazzes | set(c.get_superclasses(True))
+        for c in clazzes:
+            shapes = c.get_nodeshapes()
+            for s in shapes:
+                properties = properties + s.get_shacl_properties()
+        return properties
+
     def get_shacl_properties(self) -> List["ShaclProperty"]:
         result = self.graph.query(
             self.SHACL_PROP_QUERY, initBindings={"shape": URIRef(self.iri)}
@@ -350,6 +365,22 @@ class NodeShape(SemanticModelElement):
             classes.append(RdfClass(str(r.target), self.graph))
         classes.sort(key=lambda p: p.label)
         return classes
+    
+    def get_json_schema_comment(self) -> str:
+        no_comment = (
+            self.comment is None or self.comment == "" or self.comment.lower() == "n/a"
+        )
+        if no_comment is False:
+            return self.comment
+        for c in self.get_classes():
+            no_comment = (
+                c.comment is None or c.comment == "" or c.comment.lower() == "n/a"
+            )
+            if no_comment is False:
+                return c.comment
+        return "n/a"
+
+
 
 
 class RdfClass(SemanticModelElement):
@@ -360,6 +391,17 @@ class RdfClass(SemanticModelElement):
         WHERE
         {
             ?subclass rdfs:subClassOf ?superclass .
+        }
+        """
+    )
+
+    TRANSITIVE_SUPERCLASSES_QUERY = prepareQuery(
+        """
+        PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        SELECT DISTINCT ?superclass
+        WHERE
+        {
+            ?subclass rdfs:subClassOf+ ?superclass .
         }
         """
     )
@@ -422,9 +464,12 @@ class RdfClass(SemanticModelElement):
         props.sort(key=lambda c: c.label)
         return props
 
-    def get_superclasses(self) -> list:
+    def get_superclasses(self, transitive: bool = False) -> list:
+        query = self.SUPERCLASSES_QUERY
+        if transitive == True:
+            query = self.TRANSITIVE_SUPERCLASSES_QUERY
         result = self.graph.query(
-            self.SUPERCLASSES_QUERY, initBindings={"subclass": URIRef(self.iri)}
+            query, initBindings={"subclass": URIRef(self.iri)}
         )
         superclasses = []
         for r in result:
@@ -779,7 +824,11 @@ class SemanticModel(SemanticModelElement):
                     }
                     MINUS
                     {
-                          ?instance rdf:type sh:Nodeshape . 
+                          ?instance rdf:type owl:Ontology . 
+                    }
+                    MINUS
+                    {
+                          ?instance rdf:type sh:NodeShape . 
                     }
                     MINUS
                     {

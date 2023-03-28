@@ -1,6 +1,3 @@
-# Renderer gets a graph and a focus node
-# It registeres a number of SPARQL queries. For each query, it registers an HTML template to render the data resulting from the SPARQL query.
-# The template can use additional standardized queries to get further information from the graph through the renderer.
 from liquid import Environment
 from liquid import Mode
 from liquid import StrictUndefined
@@ -16,7 +13,7 @@ from shapiro_model import (
     ShaclProperty,
     NodeShape,
 )
-from shapiro_util import NotFoundException, prune_iri, get_logger
+from shapiro_util import NotFoundException, ConflictingPropertyException, prune_iri, get_logger
 import markdown as md
 import multiline
 from typing import List
@@ -59,7 +56,9 @@ class JsonSchemaRenderer:
         properties = (
             []
         )  # list of dicts with all information for each property, including constraints
-        for p in shape.get_shacl_properties():
+        shacl_props = shape.get_shacl_properties()
+        shacl_props = shacl_props + shape.get_inherited_shacl_properties()
+        for p in shacl_props:
             name = p.get_json_schema_name()
             jstype = p.get_json_schema_type()
             type = None
@@ -93,8 +92,22 @@ class JsonSchemaRenderer:
                 ):
                     prop["constraints"].append(d1)
             prop["constraint_count"] = len(prop["constraints"])
-            properties.append(prop)
+            if self.is_conflict(properties, prop) == False:
+                properties.append(prop)
+            else:
+                msg = "Cannot produce well-formed JSON-SCHEMA: The SHACL property for {} defined in shape {} conflicts with another SHACL property for the same {} defined in another shape.".format(prop["name"], list(map(lambda s:s.iri, p.get_nodeshapes())), prop["name"])
+                log.error(msg)
+                raise ConflictingPropertyException(msg)
         return properties
+    
+    def is_conflict(self, properties:List[dict], property:dict):
+        # check if the specified property is already in the list of properties
+        # this can happen if different nodeshapes with the same targetclass 
+        # define SHACL property constraints on the same properties of the shared targetclass.
+        for p in properties:
+            if p["iri"] == property["iri"]:
+                return True
+        return False
 
     def render_nodeshape(self, shape_iri: str) -> str:
         log.info("Rendering JSON-SCHEMA for {}".format(shape_iri))
@@ -119,7 +132,7 @@ class JsonSchemaRenderer:
             content = self.env.get_template("render_model.jsonschema").render(
                 shape_iri=shape_iri,
                 shape_label=shape.label,  # TODO: use target class label if shape label is empty
-                shape_description=shape.comment,  # TODO: use target class comment if shape comment is empty
+                shape_description=shape.get_json_schema_comment(),
                 properties=properties,
                 required=required,
                 required_count=len(required),

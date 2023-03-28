@@ -27,6 +27,9 @@ class NotFoundException(Exception):
     def __init__(self, content: str):
         self.content = content
 
+class ConflictingPropertyException(Exception):
+    def __init__(self, content: str):
+        self.content = content
 
 def prefix(iri: str, name: str) -> str:
     known = {
