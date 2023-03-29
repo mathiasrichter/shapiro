@@ -13,7 +13,7 @@ from rdflib import Graph
 import pyshacl
 import json
 import copy
-from urllib.parse import urlparse
+from urllib.parse import urlparse, ParseResult
 from typing import List
 from threading import Thread, Event
 from datetime import datetime
@@ -503,6 +503,51 @@ def get_schema(
                 content={"err_msg": str(x)}, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
+def get_schema_graph(url:str, schema_path:str) -> Graph:
+    schema_graph = None
+    elems = schema_path.split("/")
+    url_parsed = urlparse(url)
+    alt_netloc = url_parsed.netloc
+    if "localhost" in url_parsed.netloc:
+        alt_netloc = url_parsed.netloc.replace("localhost", "127.0.0.1")
+    if "127.0.0.1" in url_parsed.netloc:
+        alt_netloc = url_parsed.netloc.replace("127.0.0.1", "localhost")
+    if (
+        ("." in elems[0] or ":" in elems[0] or "localhost" in elems[0])
+        and url_parsed.netloc not in schema_path
+        and alt_netloc not in schema_path
+    ):  # last 2 predicates avoid doing remote calls to this server
+        # this is the host name of some other server, so let pyshacl resolve the URI
+        if BASE_URL.startswith("https://"):
+            schema_graph = Graph().parse("https://" + schema_path)
+        else:
+            schema_graph = Graph().parse("http://" + schema_path)
+        log.info("Resolving remote schema at '{}'".format(schema_path))
+        log.info("Request URL is '{}'".format(url))
+    else:
+        mod_schema_path = schema_path
+        if url_parsed.netloc in schema_path:
+            mod_schema_path = schema_path[
+                schema_path.find(url_parsed.netloc) + len(url_parsed.netloc) : len(schema_path)
+            ]
+        elif alt_netloc in schema_path:
+            mod_schema_path = schema_path[
+                schema_path.find(alt_netloc) + len(alt_netloc) : len(schema_path)
+            ]
+        schema_response = get_schema(mod_schema_path, MIME_TTL)
+        if schema_response.status_code == status.HTTP_404_NOT_FOUND:
+            raise Exception(
+                """Schema '{}' not found on this server - do you have the right schema name or is the feature to
+                serve schemas switched off in this server?""".format(
+                    schema_path
+                )
+            )
+        else:
+            schema = schema_response.body
+            schema_graph = Graph()
+            schema_graph.parse(schema, format="ttl")
+            log.info("Resolving local schema at '{}'".format(schema_path))
+    return schema_graph
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
@@ -516,8 +561,7 @@ async def validate(schema_path: str, request: Request):
     If no schema_path is provided, then validate the data provided in the body of the request against one or more
     schemas inferred from the data (by context or prefix) - this will validate the data against any schema referenced
     by the data.
-    Returns status 200 OK with a collection of validation reports in JSONLD format
-    (http://www.w3.org/ns/shacl#ValidationReport) keyed by schema against validation was run.
+    Returns status 200 OK with a of validation report in JSONLD format.
     """
     try:
         content_type = request.headers.get("content-type", "")
@@ -551,48 +595,7 @@ async def validate(schema_path: str, request: Request):
                 data_format, schema_path
             )
         )
-        elems = schema_path.split("/")
-        url = urlparse(request.url._url)
-        alt_netloc = url.netloc
-        if "localhost" in url.netloc:
-            alt_netloc = url.netloc.replace("localhost", "127.0.0.1")
-        if "127.0.0.1" in url.netloc:
-            alt_netloc = url.netloc.replace("127.0.0.1", "localhost")
-        if (
-            ("." in elems[0] or ":" in elems[0] or "localhost" in elems[0])
-            and url.netloc not in schema_path
-            and alt_netloc not in schema_path
-        ):  # last 2 predicates avoid doing remote calls to this server
-            # this is the host name of some other server, so let pyshacl resolve the URI
-            if BASE_URL.startswith("https://"):
-                schema_graph = Graph().parse("https://" + schema_path)
-            else:
-                schema_graph = Graph().parse("http://" + schema_path)
-            log.info("Resolving remote schema at '{}'".format(schema_path))
-            log.info("Request URL is '{}'".format(request.url._url))
-        else:
-            mod_schema_path = schema_path
-            if url.netloc in schema_path:
-                mod_schema_path = schema_path[
-                    schema_path.find(url.netloc) + len(url.netloc) : len(schema_path)
-                ]
-            elif alt_netloc in schema_path:
-                mod_schema_path = schema_path[
-                    schema_path.find(alt_netloc) + len(alt_netloc) : len(schema_path)
-                ]
-            schema_response = get_schema(mod_schema_path, MIME_TTL)
-            if schema_response.status_code == status.HTTP_404_NOT_FOUND:
-                raise Exception(
-                    """Schema '{}' not found on this server - do you have the right schema name or is the feature to
-                    serve schemas switched off in this server?""".format(
-                        schema_path
-                    )
-                )
-            else:
-                schema = schema_response.body
-                schema_graph = Graph()
-                schema_graph.parse(schema, format="ttl")
-                log.info("Resolving local schema at '{}'".format(schema_path))
+        schema_graph = get_schema_graph(request.url._url, schema_path)
         result = pyshacl.validate(
             data_graph
             + schema_graph,  # needed to ensure inheritance is picked up properly
@@ -628,17 +631,18 @@ async def validate_infer_model(request: Request, data_graph: Graph, data_format:
     # the data against every prefix
     schema_graphs = []
     for s, p, o in data_graph:
-        iri = extract_base(str(s))
-        if iri is not None and iri not in schema_graphs:
+        iri = str(s)
+        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
             schema_graphs.append(iri)
-        iri = extract_base(str(p))
-        if iri is not None and iri not in schema_graphs:
+        iri = str(p)
+        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
             schema_graphs.append(iri)
-        iri = extract_base(str(o))
-        if iri is not None and iri not in schema_graphs:
+        iri = str(o)
+        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
             schema_graphs.append(iri)
     for i in IGNORE_NAMESPACES:
-        for s in schema_graphs:
+        schema_graphs_copy = schema_graphs.copy()
+        for s in schema_graphs_copy:
             if i in s:
                 schema_graphs.remove(s)
     log.info(
@@ -647,34 +651,11 @@ async def validate_infer_model(request: Request, data_graph: Graph, data_format:
         )
     )
     results = {}
+    schema_graph = Graph()
     for s in schema_graphs:
-        validation_response = await validate(s, request)
-        results[s] = json.loads(validation_response.body)
-    log.info("Successfully created {} validation reports.".format(len(results)))
-    response = JSONResponse(
-        content=jsonable_encoder(results), media_type=MIME_JSONLD, status_code=200
-    )
-    return response
-
-
-def extract_base(iri: str):
-    """
-    If the IRI contains an anchor and a protocol, strip it away.
-    """
-    if iri.startswith(
-        "file://"
-    ):  # some libraries mark non-iri id's as file-based iri's. we ignore these.
-        return None
-    pos = iri.find("#")
-    if pos > 0:
-        iri = iri[0:pos]
-    pos = iri.find("://")
-    if pos > 0:
-        iri = iri[pos + 3 : len(iri)]
-        return iri
-    # plain string literal, not an iri, ignore
-    return None
-
+        log.info("Getting schema graph {}".format(s))
+        schema_graph += get_schema_graph(request.url._url, s)
+    return await validate(s, request)  
 
 def resolve(accept_header: str, path: str):
     """

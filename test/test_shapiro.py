@@ -674,8 +674,8 @@ def test_validate_with_remote_schema():
             content=data_file.read(),
             headers={"content-type": shapiro_server.MIME_JSONLD}
         )
-        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
+        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         report = response.json()
         assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
 
@@ -716,13 +716,10 @@ def test_validate_with_inference_with_compliant_jsonld_data():
             content=data_file.read(),
             headers={"content-type": shapiro_server.MIME_JSONLD},
         )
-        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
+        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
 
 
 def test_validate_with_inference_with_uncompliant_jsonld_data():
@@ -735,10 +732,7 @@ def test_validate_with_inference_with_uncompliant_jsonld_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
 
 
 def test_validate_with_inference_with_compliant_jsonld_list_data():
@@ -751,10 +745,7 @@ def test_validate_with_inference_with_compliant_jsonld_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
 
 
 def test_validate_with_inference_with_uncompliant_jsonld_list_data():
@@ -767,10 +758,7 @@ def test_validate_with_inference_with_uncompliant_jsonld_list_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
 
 
 def test_validate_with_inference_with_compliant_ttl_data():
@@ -783,10 +771,7 @@ def test_validate_with_inference_with_compliant_ttl_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
 
 
 def test_validate_with_inference_with_uncompliant_ttl_data():
@@ -799,10 +784,7 @@ def test_validate_with_inference_with_uncompliant_ttl_data():
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
 
 
 def test_validate_with_inference_with_compliant_ttl_list_data():
@@ -812,13 +794,10 @@ def test_validate_with_inference_with_compliant_ttl_list_data():
             content=data_file.read(),
             headers={"content-type": shapiro_server.MIME_TTL},
         )
-        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
+        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == True
 
 
 def test_validate_with_inference_with_uncompliant_ttl_list_data():
@@ -828,13 +807,10 @@ def test_validate_with_inference_with_uncompliant_ttl_list_data():
             content=data_file.read(),
             headers={"content-type": shapiro_server.MIME_TTL},
         )
-        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         assert response.status_code == 200
+        assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)
         report = response.json()
-        key = iter(report.keys()).__next__()
-        assert (
-            report[key][0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
-        )
+        assert report[0]["http://www.w3.org/ns/shacl#conforms"][0]["@value"] == False
 
 
 def test_validate_with_inference_with_syntax_error_ttl_data():
