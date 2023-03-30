@@ -34,26 +34,7 @@
             {% endfor %}
         </table>
         {% else %}
-        This model does not seem to define any RDFS classes.
-        {% endif %}
-        <h3 class="mt-5">NodeShapes</h3>
-        {% if shape_count > 0 %}
-        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th class="th-sm">NodeShape</th>
-                    <th class="th-sm">Description</th>
-                </tr>
-            </thead>
-            {% for s in shapes %}
-            <tr>
-                <td><a href="{{s.iri}}">{{s.label}}</a></td>
-                <td>{{s.comment | markdown}}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-        This model does not seem to define any SHACL node shapes.
+        This model does not seem to define any RDFS/OWL classes.
         {% endif %}
         <h3 class="mt-5">Properties</h3>
         {% if property_count > 0 %}
@@ -73,6 +54,25 @@
         </table>
         {% else %}
         This model does not seem to define any RDFS properties.
+        {% endif %}
+        <h3 class="mt-5">NodeShapes</h3>
+        {% if shape_count > 0 %}
+        <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th class="th-sm">NodeShape</th>
+                    <th class="th-sm">Description</th>
+                </tr>
+            </thead>
+            {% for s in shapes %}
+            <tr>
+                <td><a href="{{s.iri}}">{{s.label}}</a></td>
+                <td>{{s.comment | markdown}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        This model does not seem to define any SHACL node shapes.
         {% endif %}
         <h3 class="mt-5">Instances</h3>
         {% if instance_count > 0 %}
