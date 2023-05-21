@@ -193,11 +193,13 @@ def test_render_model():
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
 
+
 def test_render_model_with_trailing_slash():
     mime_in = "text/html"
     response = client.get("/com/example/org/person/", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
+
 
 def test_render_model_with_ontology_url_fragment():
     mime_in = "text/html"
@@ -213,23 +215,40 @@ def test_render_model_with_ontology_url_slash():
     assert response.status_code == 200
 
 
+def test_render_enum_shape():
+    mime_in = "text/html"
+    response = client.get(
+        "/com/example/org/model_for_jsonschema/EnumExampleShape",
+        headers={"accept": mime_in},
+    )
+    assert response.headers["content-type"].startswith(mime_in)
+    assert response.status_code == 200
+
+
 def test_render_class():
     mime_in = "text/html"
     response = client.get("/com/example/org/person/Person", headers={"accept": mime_in})
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
-    
+
+
 def test_render_owl_class():
     mime_in = "text/html"
-    response = client.get("/com/example/org/otherModel/SomeOwlClass", headers={"accept": mime_in})
+    response = client.get(
+        "/com/example/org/otherModel/SomeOwlClass", headers={"accept": mime_in}
+    )
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
 
+
 def test_render_instance():
     mime_in = "text/html"
-    response = client.get("/com/example/org/otherModel/SomeInstance", headers={"accept": mime_in})
+    response = client.get(
+        "/com/example/org/otherModel/SomeInstance", headers={"accept": mime_in}
+    )
     assert response.headers["content-type"].startswith(mime_in)
     assert response.status_code == 200
+
 
 def test_render_class_with_instances():
     mime_in = "text/html"
@@ -463,10 +482,23 @@ def test_get_existing_nodeshape_as_json_schema():
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
+
+def test_enums_with_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "/com/example/org/model_for_jsonschema/EnumExampleShape",
+        headers={"accept": mime},
+    )
+    response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
+
+
 def test_get_existing_nodeshape_with_inheritance_conflict_as_json_schema():
     mime = "application/schema+json"
     response = client.get(
-        "/com/example/org/multiple_nodeshapes_inherit_conflict/CShape", headers={"accept": mime}
+        "/com/example/org/multiple_nodeshapes_inherit_conflict/CShape",
+        headers={"accept": mime},
     )
     assert response.status_code == 422
 
@@ -480,9 +512,20 @@ def test_get_existing_nodeshape_with_inheritance_as_json_schema():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith(mime)
     assert len(result["required"]) == 4
-    assert "P1" in result["required"] and "P2" in result["required"] and "P3" in result["required"] and "P4" in result["required"]
+    assert (
+        "P1" in result["required"]
+        and "P2" in result["required"]
+        and "P3" in result["required"]
+        and "P4" in result["required"]
+    )
     assert len(result["properties"]) == 4
-    assert "P1" in result["properties"].keys() and "P2" in result["properties"].keys() and "P3" in result["properties"].keys() and "P4" in result["properties"].keys()
+    assert (
+        "P1" in result["properties"].keys()
+        and "P2" in result["properties"].keys()
+        and "P3" in result["properties"].keys()
+        and "P4" in result["properties"].keys()
+    )
+
 
 def test_get_non_nodeshape_as_json_schema():
     mime = "application/schema+json"
@@ -672,7 +715,7 @@ def test_validate_with_remote_schema():
         response = client.post(
             "/validate/www.w3.org/2000/01/rdf-schema",
             content=data_file.read(),
-            headers={"content-type": shapiro_server.MIME_JSONLD}
+            headers={"content-type": shapiro_server.MIME_JSONLD},
         )
         assert response.status_code == 200
         assert response.headers["content-type"].startswith(shapiro_server.MIME_JSONLD)

@@ -47,7 +47,18 @@
             {% for c in constraints %}
             <tr>
                 <td><a href="{{c.constraint_iri}}">{{c.constraint_iri | prune}}</a></td>
-                <td>{{c.value|url}}</td>
+                {% if c.is_enum == true and c.constraint_iri == "http://www.w3.org/ns/shacl#in" %}
+                    <td>
+                        {% for i in c.value %}
+                            {% if c.needs_quotes == true %}"{% endif %}{{i | url}}{% if c.needs_quotes == true %}"{% endif %}
+                            {% if forloop.last == false %}
+                            ,
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                {% else %}
+                    <td>{{c.value | url}}</td>
+                {% endif %}
             </tr>
             {% endfor %}
         </table>

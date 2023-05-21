@@ -47,6 +47,8 @@ TYPE_MAP = {
     "NCName": "string",
 }
 
+UNQUOTED_TYPES = ["boolean", "number", "integer"]
+
 CONSTRAINT_MAP = {
     # maps (unprefixed) SHACL constraints to JSON-Schema constraints
     "minCount": "minItems",  # for arrays only, "required" handled differently
@@ -89,9 +91,12 @@ ARRAY_ITEM_CONSTRAINTS = [
 class Subscriptable:
     def __getitem__(self, key):
         if key not in self.__dict__.keys():
-            raise Exception(
-                "Class '{}' does not have property '{}'.".format(type(self), key)
-            )
+            if key in dir(self):
+                return getattr(self, key)()
+            else:
+                raise Exception(
+                    "Class '{}' does not have property '{}'.".format(type(self), key)
+                )
         return self.__dict__[key]
 
 
@@ -314,7 +319,7 @@ class NodeShape(SemanticModelElement):
             {
                 ?shape sh:property ?shacl_prop .
             }
-                """
+        """
     )
 
     CLASS_QUERY = prepareQuery(
@@ -325,7 +330,7 @@ class NodeShape(SemanticModelElement):
             {
                 ?shape sh:targetClass ?target .
             }
-            """
+        """
     )
 
     def __init__(self, iri: str, graph: Graph):
@@ -365,7 +370,7 @@ class NodeShape(SemanticModelElement):
             classes.append(RdfClass(str(r.target), self.graph))
         classes.sort(key=lambda p: p.label)
         return classes
-    
+
     def get_json_schema_comment(self) -> str:
         no_comment = (
             self.comment is None or self.comment == "" or self.comment.lower() == "n/a"
@@ -379,8 +384,6 @@ class NodeShape(SemanticModelElement):
             if no_comment is False:
                 return c.comment
         return "n/a"
-
-
 
 
 class RdfClass(SemanticModelElement):
@@ -468,9 +471,7 @@ class RdfClass(SemanticModelElement):
         query = self.SUPERCLASSES_QUERY
         if transitive == True:
             query = self.TRANSITIVE_SUPERCLASSES_QUERY
-        result = self.graph.query(
-            query, initBindings={"subclass": URIRef(self.iri)}
-        )
+        result = self.graph.query(query, initBindings={"subclass": URIRef(self.iri)})
         superclasses = []
         for r in result:
             superclasses.append(RdfClass(str(r.superclass), self.graph))
@@ -499,9 +500,13 @@ class RdfClass(SemanticModelElement):
 
 
 class ShaclConstraint(Subscriptable):
-    def __init__(self, constraint_iri: str, value: str):
+    def __init__(
+        self, parent: "ShaclProperty", constraint_iri: str, value: str, is_enum: bool
+    ):
+        self.parent = parent
         self.constraint_iri = constraint_iri
         self.value = value
+        self.is_enum = is_enum
 
     def get_json_schema_name(self):
         for k in CONSTRAINT_MAP.keys():
@@ -510,6 +515,8 @@ class ShaclConstraint(Subscriptable):
         return None
 
     def needs_quotes(self) -> bool:
+        if self.is_enum:
+            return self.parent.get_json_schema_type()[0] not in UNQUOTED_TYPES
         return self.get_json_schema_name() not in NUMERIC_CONSTRAINTS
 
 
@@ -527,13 +534,25 @@ class ShaclProperty(SemanticModelElement):
 
     SHACL_CONSTRAINTS_QUERY = prepareQuery(
         """ 
-                SELECT DISTINCT ?constraint ?value
+                SELECT DISTINCT ?property ?constraint ?value
                 WHERE
                 {
                     ?property ?constraint ?value .
                     FILTER(STRSTARTS(STR(?constraint), "http://www.w3.org/ns/shacl#")) .
                 }
                 """
+    )
+
+    SHACL_IN_QUERY = prepareQuery(
+        """
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+                SELECT  ?source ?item
+                WHERE {
+                ?source sh:in/rdf:rest*/rdf:first ?item
+                }
+            """
     )
 
     def __init__(self, iri: str, graph: Graph):
@@ -550,7 +569,19 @@ class ShaclProperty(SemanticModelElement):
         )
         constraints = []
         for r in result:
-            constraints.append(ShaclConstraint(str(r.constraint), str(r.value)))
+            p = str(r.property)
+            c = str(r.constraint)
+            v = str(r.value)
+            is_enum = False
+            if c.endswith("shacl#in"):
+                is_enum = True
+                v = []
+                items = self.graph.query(
+                    self.SHACL_IN_QUERY, initBindings={"source": BNode(p)}
+                )
+                for i in items:
+                    v.append(i.item)
+            constraints.append(ShaclConstraint(self, c, v, is_enum))
         constraints.sort(key=lambda c: c.constraint_iri)
         return constraints
 

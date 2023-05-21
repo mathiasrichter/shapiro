@@ -18,6 +18,67 @@
 # 7. inheritance of classes
 # 8. documentation in nodeshapes and shacl properties vs documentation on the target classes and properties
 # 9. blank nodes as shacl properties vs names nodes as shacl properties
+# 10. enums
+
+:EnumExample a rdfs:Class ;
+    rdfs:label "EnumExample" ;
+    rdfs:comment "An example class to test enums correctly" ;
+.
+
+:enumExampleName a rdfs:Property ;
+    rdfs:label "enumExampleName" ;
+    rdfs:comment "An example property to test string enums correctly" ;
+.
+
+:enumExampleFavoriteNumber a rdfs:Property ;
+    rdfs:label "enumExampleFavoriteNumber" ;
+    rdfs:comment "An example property to test arrays with enums correctly" ;
+.
+
+:hasName a rdfs:Property ;
+    rdfs:label "hasName" ;
+    rdfs:comment "An example property to test object enums correctly" ;
+.
+
+:Name a rdfs:Class ;
+    rdfs:label "Name" ;
+    rdfs:comment "An example class to test enums correctly" ;
+.
+
+:joe a :Name .
+:john a :Name .
+:jane a :Name .
+:janet a :Name .
+
+:enumExampleAge a rdfs:Property ;
+    rdfs:label "enumExampleAge" ;
+    rdfs:comment "An example property to test numeric enums correctly" ;
+.
+
+:EnumExampleShape a sh:NodeShape ;
+    sh:targetClass :EnumExample ;
+    sh:property [
+        sh:path :enumExampleName ;
+        sh:datatype xsd:string ;
+        sh:in ("Jane" "John" "Joe" "Janet") ;
+    ] ;
+    sh:property [
+        sh:path :enumExampleAge ;
+        sh:datatype xsd:integer ;
+        sh:in (5 10 25 38 47 56 62) ;
+    ] ;
+    sh:property [
+        sh:path :enumExampleFavoriteNumber ;
+        sh:datatype xsd:integer ;
+        sh:maxCount 10 ;
+        sh:in (5 10 25 38 47 56 62) ;
+    ] ;
+    sh:property [
+        sh:path :hasName ;
+        sh:class :Name ;
+        sh:in (:joe :john :jane :janet) ;
+    ] ;
+.
 
 :SimplePerson a rdfs:Class ;
     rdfs:label "SimplePerson" ;

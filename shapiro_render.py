@@ -13,7 +13,12 @@ from shapiro_model import (
     ShaclProperty,
     NodeShape,
 )
-from shapiro_util import NotFoundException, ConflictingPropertyException, prune_iri, get_logger
+from shapiro_util import (
+    NotFoundException,
+    ConflictingPropertyException,
+    prune_iri,
+    get_logger,
+)
 import markdown as md
 import multiline
 from typing import List
@@ -24,7 +29,7 @@ log = get_logger("SHAPIRO_RENDER")
 def url(value: str) -> str:
     url = urlparse(value)
     if url.scheme != "" and url.scheme is not None:
-        return '<a href="' + value + '" target="blank">' + prune_iri(value) + "</a>"
+        return '<a href="' + value + '">' + prune_iri(value) + "</a>"
     return value
 
 
@@ -43,13 +48,24 @@ class JsonSchemaRenderer:
         for c in shacl_constraints:
             name = c.get_json_schema_name()
             if name is not None:
-                constraints.append(
-                    {
-                        "name": name,
-                        "needs_quotes": c.needs_quotes(),
-                        "value": c.value,
-                    }
-                )
+                d = {
+                    "name": name,
+                    "needs_quotes": c.needs_quotes(),
+                    "value": c.value,
+                }
+                delim = ""
+                remove = 2
+                if c.needs_quotes() is True:
+                    delim = '"'
+                    remove = 3
+                if c.is_enum is True:
+                    v = "[" + delim
+                    for i in c.value:
+                        v += str(i) + delim + ", " + delim
+                    v = v[0 : len(v) - remove] + "]"
+                    d["value"] = v
+                    d["needs_quotes"] = False  # avoid outer quotes around enum array
+                constraints.append(d)
         return constraints
 
     def get_data_for_shape(self, shape: NodeShape) -> dict:
@@ -95,14 +111,18 @@ class JsonSchemaRenderer:
             if self.is_conflict(properties, prop) == False:
                 properties.append(prop)
             else:
-                msg = "Cannot produce well-formed JSON-SCHEMA: The SHACL property for {} defined in shape {} conflicts with another SHACL property for the same {} defined in another shape.".format(prop["name"], list(map(lambda s:s.iri, p.get_nodeshapes())), prop["name"])
+                msg = "Cannot produce well-formed JSON-SCHEMA: The SHACL property for {} defined in shape {} conflicts with another SHACL property for the same {} defined in another shape.".format(
+                    prop["name"],
+                    list(map(lambda s: s.iri, p.get_nodeshapes())),
+                    prop["name"],
+                )
                 log.error(msg)
                 raise ConflictingPropertyException(msg)
         return properties
-    
-    def is_conflict(self, properties:List[dict], property:dict):
+
+    def is_conflict(self, properties: List[dict], property: dict):
         # check if the specified property is already in the list of properties
-        # this can happen if different nodeshapes with the same targetclass 
+        # this can happen if different nodeshapes with the same targetclass
         # define SHACL property constraints on the same properties of the shared targetclass.
         for p in properties:
             if p["iri"] == property["iri"]:
