@@ -1,6 +1,8 @@
 main.py
 scratch.*
 fts_index/
+*.ssh
+.ssh
 
 # folder from intellij
 .idea

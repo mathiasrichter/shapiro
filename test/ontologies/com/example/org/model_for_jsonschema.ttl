@@ -28,7 +28,10 @@
 :enumExampleName a rdfs:Property ;
     rdfs:label "enumExampleName" ;
     rdfs:comment "An example property to test string enums correctly" ;
-.
+     sh:path :enumExampleName ;
+        sh:datatype xsd:string ;
+        sh:in ("Jane" "John" "Joe" "Janet") ;
+        .
 
 :enumExampleFavoriteNumber a rdfs:Property ;
     rdfs:label "enumExampleFavoriteNumber" ;
@@ -38,6 +41,14 @@
 :hasName a rdfs:Property ;
     rdfs:label "hasName" ;
     rdfs:comment "An example property to test object enums correctly" ;
+.
+
+:hasMiddleName a rdfs:Property ;
+    rdfs:label "hasMiddleName" ;
+    rdfs:comment "A property to test enums when defined on the rdfs property" ;
+    sh:path :hasMiddleName ;
+    sh:datatype xsd:string ;
+    sh:in ("William" "Wilhelmine") ;
 .
 
 :Name a rdfs:Class ;
@@ -57,6 +68,7 @@
 
 :EnumExampleShape a sh:NodeShape ;
     sh:targetClass :EnumExample ;
+    sh:property :hasMiddleName ;
     sh:property [
         sh:path :enumExampleName ;
         sh:datatype xsd:string ;

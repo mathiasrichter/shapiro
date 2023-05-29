@@ -576,8 +576,12 @@ class ShaclProperty(SemanticModelElement):
             if c.endswith("shacl#in"):
                 is_enum = True
                 v = []
+                if urlparse(p).scheme == "":  #  if p is a blank node
+                    prop = BNode(self.iri)
+                else:
+                    prop = URIRef(self.iri)
                 items = self.graph.query(
-                    self.SHACL_IN_QUERY, initBindings={"source": BNode(p)}
+                    self.SHACL_IN_QUERY, initBindings={"source": prop}
                 )
                 for i in items:
                     v.append(i.item)
