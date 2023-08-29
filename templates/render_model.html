@@ -10,7 +10,7 @@
             {% for k in model_details_keys %}
             <tr>
                 <td class="fw-bolder"><a href="{{k}}">{{model_details_names[k]}}</a></td>
-                <td>{{ model_details[k] | url}}</td>
+                <td>{{ model_details[k] | url | markdown}}</td>
             </tr>
             {% endfor %}
         </table>

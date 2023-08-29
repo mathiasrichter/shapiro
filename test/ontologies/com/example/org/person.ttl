@@ -17,7 +17,11 @@
   dct:created "2022-09-22"^^xsd:date ;
   dct:publisher <http://example.org/mathiasrichter> ;
   rdfs:label "Person Model" ;
-  rdfs:comment "An ontology used to test Shapiro." ;
+  rdfs:comment """An _ontology_ used to test Shapiro. Here's some markdown. We use [markdown](https://www.markdownguide.org/cheat-sheet) in the following places:   
+- here   
+- there   
+- wherever.   
+""" ;
   dct:title "Person Model" ; 
   dct:description "An ontology used to test Shapiro." ;
   dct:modified "2023-01-31"^^xsd:date ;
