@@ -4,35 +4,35 @@
         <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
             <tr>
                 <td class="fw-bolder">IRI</td>
-                <td><a href="{{the_class.iri}}">{{the_class.iri}}</a></td>
+                <td><a href="{{the_class.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{the_class.iri}}">{{the_class.iri}}</a></td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
                 <td>
                     {% for t in types %}
-                    <a href="{{t}}">{{t | prune}}</a><br />
+                    <a href="{{t}}" data-bs-toggle="tooltip" data-bs-original-title="{{t}}">{{t | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
                 <td>{{the_class.label}}</td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
                 <td>{{the_class.comment| markdown}}</td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#subClassOf">Subclass of</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#subClassOf" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#subClassOf">Subclass of</a></td>
                 <td>
                     {% for s in superclasses %}
-                        <a href="{{s.iri}}">{{s.iri | prune}}</a><br />
+                        <a href="{{s.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{s.iri}}">{{s.iri | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
                 <td class="fw-bolder">Defined in</td>
-                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+                <td><a href="{{model_iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{model_iri}}">{{model_iri | prune}}</a></td>
             </tr>
         </table>
         <h3 class="mt-5">Properties</h3>
@@ -47,7 +47,7 @@
             </thead>
             {% for p in properties %}
             <tr>
-                <td><a href="{{p.iri}}">{{p.label | prune}}</a></td>
+                <td><a href="{{p.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{p.iri}}">{{p.label | prune}}</a></td>
                 <td>{{p.comment | markdown}}</td>
                 <td>
                     {% for t in prop_types[p.iri] %}
@@ -79,5 +79,7 @@
         {% else %}
         This class does not seem to have any instances defined in this model.
         {% endif %}
-   </div>
+        {{predicates}}
+    </div>
 </section>
+

@@ -1,0 +1,35 @@
+<h3 class="mt-5">All Predicates for {{element.label}}</h3>
+<p>
+This section lists all predicates and objects, for which {{element.label}} is the subject.
+In addition to the information already rendered in previous sections of this page, this will reveal any additional predicates.
+</p>
+<table id="predicates" class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th class="th-sm">Predicate</th>
+            <th class="th-sm">Object</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in predicates %}
+        <tr>
+            <td><a href="{{p.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{p.iri}}">{{p.label}}</a></td>
+            {% if p.value_iri != "" %}
+            <td><a href="{{p.value_iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{p.value_iri}}">{{p.value_label}}</a></td>
+            {% else %}
+            <td>{{p.value_label | markdown}}</td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script type="application/javascript">
+$(document).ready(function() {
+    $('#predicates').DataTable( {
+        "paging":   true, 
+        "ordering": true, 
+        "info":     true 
+    } );
+} );
+</script>

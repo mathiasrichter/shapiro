@@ -4,51 +4,51 @@
         <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
             <tr>
                 <td class="fw-bolder">IRI</td>
-                <td><a href="{{property.iri}}">{{property.iri}}</a></td>
+                <td><a href="{{property.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{property.iri}}">{{property.iri}}</a></td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
                 <td>
                     {% for t in types %}
-                        <a href="{{t}}">{{t | prune}}</a><br />
+                        <a href="{{t}}" data-bs-toggle="tooltip" data-bs-original-title="{{t}}">{{t | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
                 <td>{{property.label}}</td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
                 <td>{{property.comment | markdown}}</td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#range">Type</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#range" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#range">Type</a></td>
                 <td>
                     {% for t in prop_type %}
-                    <a href="{{t}}">{{t | prune}}</a><br />
+                    <a href="{{t}}" data-bs-toggle="tooltip" data-bs-original-title="{{t}}">{{t | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#domain">Used in Classes</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#domain" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#domain">Used in Classes</a></td>
                 <td>
                     {% for c in classes %}
-                    <a href="{{c}}">{{c | prune}}</a><br />
+                    <a href="{{c}}" data-bs-toggle="tooltip" data-bs-original-title="{{c}}">{{c | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#subPropertyOf">Subproperty of</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#subPropertyOf" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/1999/02/22-rdf-syntax-ns#subPropertyOf">Subproperty of</a></td>
                 <td>
                     {% for s in superprop %}
-                    <a href="{{s}}">{{s | prune}}</a><br />
+                    <a href="{{s}}" data-bs-toggle="tooltip" data-bs-original-title="{{s}}">{{s | prune}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
                 <td class="fw-bolder">Defined in</td>
-                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+                <td><a href="{{model_iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{model_iri}}">{{model_iri | prune}}</a></td>
             </tr>
         </table>
         <h3 class="mt-5">SHACL Properties</h3>
@@ -72,14 +72,14 @@
                 <td>{{sp.comment | markdown}}</td>
                 <td>
                     {% for n in shacl_prop_shapes[sp.iri] %}
-                        <a href="{{n}}">{{n | prune}}</a><br/>
+                        <a href="{{n}}" data-bs-toggle="tooltip" data-bs-original-title="{{n}}">{{n | prune}}</a><br/>
                     {% endfor %}
                 </td>
                 <td>
                     <table>
                         {% for c in shacl_prop_constraints[sp.iri] %}
                         <tr>
-                            <td><a href="{{c.constraint_iri}}">{{c.constraint_iri | prune}}</a></td>
+                            <td><a href="{{c.constraint_iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{c.constraint_iri}}">{{c.constraint_iri | prune}}</a></td>
                             <td/><td/>
                             {% if c.is_enum == true and c.constraint_iri == "http://www.w3.org/ns/shacl#in" %}
                                 <td>
@@ -103,5 +103,6 @@
         {% else %}
             This property does not seem to have any associated SHACL properties.
         {% endif %}
+        {{predicates}}
     </div>
 </section>

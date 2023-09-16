@@ -25,13 +25,11 @@ from typing import List
 
 log = get_logger("SHAPIRO_RENDER")
 
-
 def url(value: str) -> str:
     url = urlparse(value)
     if url.scheme != "" and url.scheme is not None:
-        return '<a href="' + value + '">' + prune_iri(value) + "</a>"
+        return '<a href="' + value + '" data-bs-toggle="tooltip" data-bs-original-title="' + value + '">' + prune_iri(value) + "</a>"
     return value
-
 
 class JsonSchemaRenderer:
     def __init__(self, template_path: str = "./templates"):
@@ -260,6 +258,7 @@ class HtmlRenderer:
                     model_iri=c.iri[0 : c.iri.rfind("/")],
                     the_class=c,
                     types=c.get_types(),
+                    predicates=self.render_predicates(c),
                     properties=c.get_properties(),
                     prop_count=len(c.get_properties()),
                     prop_types=prop_types,
@@ -268,6 +267,13 @@ class HtmlRenderer:
                     instances=instances,
                     instance_count=instance_count,
                 )
+                
+    def render_predicates(self, element:SemanticModelElement) -> str:
+        log.info("HTML rendering predicates for {}".format(element.iri))
+        return self.env.get_template("render_predicates.html").render(
+            element=element,
+            predicates=element.get_predicates(),
+        )
 
     def render_instance(self, base_url: str, model: SemanticModel) -> str:
         log.info("HTML rendering instance at {}".format(model.iri))
@@ -277,6 +283,7 @@ class HtmlRenderer:
                     url=base_url,
                     model_iri=i.iri[0 : i.iri.rfind("/")],
                     instance=i,
+                    predicates=self.render_predicates(i),
                     classes=i.get_classes(),
                 )
 
@@ -297,6 +304,7 @@ class HtmlRenderer:
                     model=model,
                     model_iri=p.iri[0 : p.iri.rfind("/")],
                     property=p,
+                    predicates=self.render_predicates(p),
                     types=p.get_types(),
                     classes=p.get_classes(),
                     prop_type=p.get_property_type(),
@@ -326,6 +334,7 @@ class HtmlRenderer:
                     shape=n,
                     types=n.get_types(),
                     classes=n.get_classes(),
+                    predicates=self.render_predicates(n),
                     shacl_props=shacl_props,
                     shacl_prop_count=len(shacl_props),
                     shacl_prop_shapes=prop_shapes,
@@ -349,4 +358,5 @@ class HtmlRenderer:
                     shapes=prop_shapes,
                     constraints=prop_constraints,
                     constraint_count=constraint_count,
+                    predicates=self.render_predicates(sp),
                 )

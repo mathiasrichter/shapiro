@@ -4,28 +4,29 @@
         <table class="display table table-sm table-striped table-hover table-responsive" cellspacing="0" width="100%">
             <tr>
                 <td class="fw-bolder">IRI</td>
-                <td><a href="{{instance.iri}}">{{instance.iri}}</a></td>
+                <td><a href="{{instance.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{instance.iri}}">{{instance.iri}}</a></td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#label" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#label">Name</a></td>
                 <td>{{instance.label}}</td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">Kind</a></td>
                 <td>
                     {% for c in classes %}
-                        <a href="{{c.iri}}">{{c.label}}</a><br />
+                        <a href="{{c.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{c.iri}}">{{c.label}}</a><br />
                     {% endfor %}
                 </td>
             </tr>
             <tr>
-                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
+                <td class="fw-bolder"><a href="http://www.w3.org/2000/01/rdf-schema#comment" data-bs-toggle="tooltip" data-bs-original-title="http://www.w3.org/2000/01/rdf-schema#comment">Description</a></td>
                 <td>{{instance.comment | markdown}}</td>
             </tr>
             <tr>
                 <td class="fw-bolder">Defined in</td>
-                <td><a href="{{model_iri}}">{{model_iri | prune}}</a></td>
+                <td><a href="{{model_iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{model_iri}}">{{model_iri | prune}}</a></td>
             </tr>
         </table>
+        {{predicates}}
     </div>
 </section>

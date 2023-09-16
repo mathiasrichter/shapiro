@@ -9,7 +9,7 @@
             </tr>
             {% for k in model_details_keys %}
             <tr>
-                <td class="fw-bolder"><a href="{{k}}">{{model_details_names[k]}}</a></td>
+                <td class="fw-bolder"><a href="{{k}}" data-bs-toggle="tooltip" data-bs-original-title="{{k}}">{{model_details_names[k]}}</a></td>
                 <td>{{ model_details[k] | url | markdown}}</td>
             </tr>
             {% endfor %}
@@ -28,7 +28,7 @@
             </thead>
             {% for c in classes %}
             <tr>
-                <td><a href="{{c.iri}}">{{c.label}}</a></td>
+                <td><a href="{{c.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{c.iri}}">{{c.label}}</a></td>
                 <td>{{c.comment | markdown}}</td>
             </tr>
             {% endfor %}
@@ -47,7 +47,7 @@
             </thead>
             {% for p in properties %}
             <tr>
-                <td><a href="{{p.iri}}">{{p.label}}</a></td>
+                <td><a href="{{p.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{p.iri}}">{{p.label}}</a></td>
                 <td>{{p.comment | markdown}}</td>
             </tr>
             {% endfor %}
@@ -66,7 +66,7 @@
             </thead>
             {% for s in shapes %}
             <tr>
-                <td><a href="{{s.iri}}">{{s.label}}</a></td>
+                <td><a href="{{s.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{s.iri}}">{{s.label}}</a></td>
                 <td>{{s.comment | markdown}}</td>
             </tr>
             {% endfor %}
@@ -86,10 +86,10 @@
             </thead>
             {% for i in instances %}
             <tr>
-                <td><a href="{{i.iri}}">{{i.label}}</a></td>
+                <td><a href="{{i.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{i.iri}}">{{i.label}}</a></td>
                 <td>
                     {% for c in instance_classes[i.iri] %}
-                    <a href="{{c.iri}}">{{c.label}}</a><br/>
+                    <a href="{{c.iri}}" data-bs-toggle="tooltip" data-bs-original-title="{{c.iri}}">{{c.label}}</a><br/>
                     {% endfor %}
                 </td>
                 <td>{{i.comment | markdown}}</td>

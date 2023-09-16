@@ -87,7 +87,6 @@ ARRAY_ITEM_CONSTRAINTS = [
     "pattern",
 ]
 
-
 class Subscriptable:
     def __getitem__(self, key):
         if key not in self.__dict__.keys():
@@ -133,6 +132,16 @@ class SemanticModelElement(Subscriptable):
                     OPTIONAL { ?model rdfs:comment ?comment . } 
                     OPTIONAL { ?model dct:description ?description . } 
                     OPTIONAL { ?model skos:definition ?definition . } 
+                }
+                """
+    )
+
+    PREDICATES_QUERY = prepareQuery(
+        """
+                SELECT DISTINCT ?predicate ?object
+                WHERE
+                {
+                    { ?subject ?predicate ?object }
                 }
                 """
     )
@@ -206,6 +215,35 @@ class SemanticModelElement(Subscriptable):
         types.sort(key=lambda c: c)
         return types
 
+    def get_predicates(self) -> dict:
+        result = self.graph.query(
+            self.PREDICATES_QUERY, initBindings={"subject": URIRef(self.iri)}
+        )
+        predicates = []
+        for r in result:
+            print("------------------------------------------------------------")
+            print(r.predicate, r.object, type(r.object))
+            print("------------------------------------------------------------")
+            predicates.append(Predicate(str(r.predicate), self.graph, PredicateValue(str(r.object), self.graph)))
+        return predicates
+    
+
+class PredicateValue(SemanticModelElement):
+    
+    def __init__(self, iri, graph: Graph):
+        url = urlparse(iri)
+        if url.scheme != "" and url.scheme is not None:
+            super().__init__(iri, graph)
+        else:
+            self.label = iri
+            self.iri = ""
+
+class Predicate(SemanticModelElement):
+    
+    def __init__(self, iri: str, graph: Graph, value:PredicateValue):
+        super().__init__(iri, graph)
+        self.value_label = value.label
+        self.value_iri = value.iri
 
 class RdfProperty(SemanticModelElement):
     CLASSES_QUERY = prepareQuery(
@@ -875,7 +913,7 @@ class SemanticModel(SemanticModelElement):
 
     def __init__(self, iri: str):
         super().__init__(iri)
-
+        
     def get_model_details_for_iri(self, iri) -> dict:
         result = self.graph.query(
             self.MODEL_DETAILS_QUERY, initBindings={"model": URIRef(iri)}
