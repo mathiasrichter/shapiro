@@ -273,6 +273,11 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
                     writer.update_document(full_name=s, content=f.read())
         writer.commit()
 
+def get_version():
+    version = { 'version': '' }
+    with open('version.txt', 'r') as f:
+        version['version'] = f.read().replace('\n','')
+    return version
 
 @app.on_event("startup")
 def init():
@@ -324,9 +329,15 @@ async def welcome(request: Request):
     """
     Render a welcome page.
     """
-    welcome_page = env.get_template("main.html").render(url=BASE_URL)
+    welcome_page = env.get_template("main.html").render(url=BASE_URL, version=get_version()['version'])
     return HTMLResponse(content=welcome_page)
 
+@app.get("/version/", status_code=200)
+async def version(request: Request):
+    """
+    Return the version of Shapiro.
+    """
+    return JSONResponse(content=get_version())
 
 @app.get("/schemas/", status_code=200)
 async def get_schema_list(request: Request):

@@ -181,6 +181,11 @@ def test_get_welcome_page():
     response = client.get("/welcome/")
     assert response.status_code == 200
 
+def test_get_version():
+    response = client.get("/version/")
+    assert response.status_code == 200
+    result = response.json()
+    assert result['version'] != ''
 
 def test_redirect_to_welcome_page():
     response = client.get("/")
