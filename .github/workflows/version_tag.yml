@@ -16,9 +16,12 @@ jobs:
   do_version_tag:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip' 
-    - run: ls > foo.bar
+      - uses: actions/checkout@v3
+        with:
+          path: './'
+      - run: echo "123" > ./pathToRepo/file.txt
+      - uses: EndBug/add-and-commit@v9
+        with:
+          message: 'Updated version.txt'
+          add: 'version.txt --force'
+          cwd: './'
