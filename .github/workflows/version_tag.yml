@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: './'
-      - run: echo "123" > ./pathToRepo/file.txt
+      - run: git describe --tag > ./version.txt
       - uses: EndBug/add-and-commit@v9
         with:
           message: 'Updated version.txt'
