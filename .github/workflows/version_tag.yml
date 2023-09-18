@@ -18,10 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          path: './'
-      - run: git describe --tag > ./version.txt
+          path: '.'
+      - run: git describe --tag > version.txt
       - uses: EndBug/add-and-commit@v9
         with:
           message: 'Updated version.txt'
           add: 'version.txt --force'
-          cwd: './'
