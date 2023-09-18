@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: '.'
-      - run: echo ${{ github.job_workflow_sha }} > version.txt
+      - run: echo ${{ github.sha }} > version.txt
       - uses: EndBug/add-and-commit@v9
         with:
           message: 'Updated version.txt'
