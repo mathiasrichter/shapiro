@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          path: '.'
+          path: main
       - name: Git describe
         id: ghd
         uses: proudust/gh-describe@v1
