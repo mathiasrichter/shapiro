@@ -20,10 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          path: main
+          path: '.'
       - name: Git describe
         id: ghd
         uses: proudust/gh-describe@v1
+      - run: git checkout main
       - run: echo ${{ steps.ghd.outputs.describe }} > version.txt
       - uses: EndBug/add-and-commit@v9
         with:
