@@ -239,6 +239,7 @@ class HtmlRenderer:
             log.error(msg)
             raise NotFoundException(msg)
         log.info("HTML rendering full page for model element at {}".format(iri))
+        content += self.render_predicates(SemanticModelElement(iri))
         return self.render_page(base_url, content)
 
     def render_class(self, base_url: str, model: SemanticModel) -> str:
@@ -258,7 +259,6 @@ class HtmlRenderer:
                     model_iri=c.iri[0 : c.iri.rfind("/")],
                     the_class=c,
                     types=c.get_types(),
-                    predicates=self.render_predicates(c),
                     properties=c.get_properties(),
                     prop_count=len(c.get_properties()),
                     prop_types=prop_types,
@@ -283,7 +283,6 @@ class HtmlRenderer:
                     url=base_url,
                     model_iri=i.iri[0 : i.iri.rfind("/")],
                     instance=i,
-                    predicates=self.render_predicates(i),
                     classes=i.get_classes(),
                 )
 
@@ -304,7 +303,6 @@ class HtmlRenderer:
                     model=model,
                     model_iri=p.iri[0 : p.iri.rfind("/")],
                     property=p,
-                    predicates=self.render_predicates(p),
                     types=p.get_types(),
                     classes=p.get_classes(),
                     prop_type=p.get_property_type(),
@@ -334,7 +332,6 @@ class HtmlRenderer:
                     shape=n,
                     types=n.get_types(),
                     classes=n.get_classes(),
-                    predicates=self.render_predicates(n),
                     shacl_props=shacl_props,
                     shacl_prop_count=len(shacl_props),
                     shacl_prop_shapes=prop_shapes,
@@ -357,6 +354,5 @@ class HtmlRenderer:
                     types=sp.get_types(),
                     shapes=prop_shapes,
                     constraints=prop_constraints,
-                    constraint_count=constraint_count,
-                    predicates=self.render_predicates(sp),
+                    constraint_count=constraint_count
                 )
