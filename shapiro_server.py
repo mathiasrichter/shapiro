@@ -418,28 +418,27 @@ async def query(request: Request):
     specified in the request body and return the result.
     """
     query = await request.body()
-    json = ""
-    try:
-        result = EKG.query(query)
-        json = "["
-        for r in result:
-            if json[len(json) - 1] == "}":
+#    try:
+    result = EKG.query(query)
+    json = "["
+    for r in result:
+        if json[len(json) - 1] == "}":
+            json += ","
+        json += "{"
+        for l in r.labels:
+            if json[len(json) - 1] == '"':
                 json += ","
-            json += "{"
-            for l in r.labels:
-                if json[len(json) - 1] == '"':
-                    json += ","
-                json += '"' + l + '":' + '"' + str(r[l]) + '"'
-            json += "}"
-        json += "]"
-        return JSONResponse(content=json, status_code=status.HTTP_200_OK)
-    except Exception as x:
-        log.error("Could not execute query: {}".format(x)+'\n'+json)
-        return JSONResponse(
-            content={"err_msg": str(x)},
-            media_type="application/json",
-            status_code=status.HTTP_406_NOT_ACCEPTABLE,
-        )
+            json += '"' + l + '":' + '"' + str(r[l]) + '"'
+        json += "}"
+    json += "]"
+    return JSONResponse(content=json, status_code=status.HTTP_200_OK)
+    # except Exception as x:
+    #     log.error("Could not execute query: {}".format(x))
+    #     return JSONResponse(
+    #         content={"err_msg": str(x)},
+    #         media_type="application/json",
+    #         status_code=status.HTTP_406_NOT_ACCEPTABLE,
+    #     )
 
 
 # usage of ":path"as per https://www.starlette.io/routing/#path-parameters
