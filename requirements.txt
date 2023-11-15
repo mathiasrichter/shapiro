@@ -1,7 +1,5 @@
 fastapi
 aiofiles
-rdflib
-pyshacl
 requests
 pytest
 pytest-cov
@@ -14,3 +12,5 @@ markdown
 colorlog
 jsonschema
 multiline
+rdflib<7.0.0
+pyshacl
