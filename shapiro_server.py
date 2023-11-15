@@ -418,6 +418,7 @@ async def query(request: Request):
     specified in the request body and return the result.
     """
     query = await request.body()
+    json = ""
     try:
         result = EKG.query(query)
         json = "["
@@ -433,7 +434,7 @@ async def query(request: Request):
         json += "]"
         return JSONResponse(content=json, status_code=status.HTTP_200_OK)
     except Exception as x:
-        log.error("Could not execute query: {}".format(x))
+        log.error("Could not execute query: {}".format(x)+'\n'+json)
         return JSONResponse(
             content={"err_msg": str(x)},
             media_type="application/json",
