@@ -91,7 +91,7 @@
   rdfs:comment "A person's name as RDFS Property.";
   dct:description "A person's name as RDFS Property..";
   skos:definition "A person's name as RDFS Property..";
-  rdfs:range rdfs:string, rdfs:number;
+  rdfs:range xsd:string, rdfs:number;
   rdfs:domain :Person;
 .
 

@@ -71,7 +71,4 @@ def prune_iri(iri: str, name_only: bool = False) -> str:
         result = url.fragment
     if name_only is False:
         result = prefix(iri, result)
-    if result.__contains__(":") or len(result) == 0:
-        return result
-    else:
-        return result[0].upper() + result[1 : len(result)]
+    return result

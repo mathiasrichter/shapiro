@@ -1,0 +1,16 @@
+classDiagram
+    {% for c in classes %}class {{c.id}}["{{c.label}}"] {
+        {% if c.stereotype != null and c.stereotype != "" %}<< {{c.stereotype}}>>{% endif %}
+        {% for p in c.properties %}{{p.type_label}}  {{p.label}}
+        {% endfor %}
+    }
+    namespace {{c.namespace}} {
+        class {{c.id}}
+    }
+    {% endfor %}
+    {% for c in connections %}
+    {% if c.connection_type == 1 %}{{c.from_node}} --> {{c.to_node}} {% if c.label != "" %}:{{c.label}}{% endif %}{% endif %}
+    {% if c.connection_type == 0 %}{{c.to_node}} <|-- {{c.from_node}} {% if c.label != "" %}:{{c.label}}{% endif %}{% endif %}
+    {% if c.connection_type == 2 %}{{c.from_node}} ..> {{c.to_node}} :targetClass {% endif %}
+    {% endfor %}
+

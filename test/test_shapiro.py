@@ -908,7 +908,7 @@ def test_get_ranked_mime_types_with_none():
 
 def test_prune():
     p = prune_iri("/a/b/c/")
-    assert p == "C"
+    assert p == "c"
 
 
 def test_subscriptable():

@@ -5,6 +5,7 @@ from liquid import FileSystemLoader
 from urllib.parse import urlparse
 from urllib.error import HTTPError
 from shapiro_model import (
+    Subscriptable,
     RdfClass,
     RdfProperty,
     SemanticModel,
@@ -22,6 +23,7 @@ from shapiro_util import (
 import markdown as md
 import multiline
 from typing import List
+import re
 
 log = get_logger("SHAPIRO_RENDER")
 
@@ -31,6 +33,182 @@ def url(value: str) -> str:
         return '<a href="' + value + '" data-bs-toggle="tooltip" data-bs-original-title="' + value + '">' + prune_iri(value) + "</a>"
     return value
 
+def extract_namespace(iri:str):
+    if iri.endswith('/'):
+        iri = iri[0:len(iri)-1]
+    if '#' in iri:
+        iri = iri[0:iri.rfind('#')]
+    iri = iri[0:iri.rfind('/')]
+    namespace = iri[iri.rfind('/')+1:len(iri)].replace('.','_')
+    valid = re.match('[a-zA-Z]+', namespace) is not None
+    while valid is False:
+        iri = iri[0:iri.rfind('/')]
+        namespace = iri[iri.rfind('/')+1:len(iri)].replace('.','_')
+        valid = re.match('[a-zA-Z]+', namespace) is not None
+    return namespace
+    
+
+def get_id(iri:str):
+    return iri.replace(':','_').replace('/','_').replace('.','_')    
+        
+class MermaidProperty(Subscriptable):
+    
+    def __init__(self, type_label:str, label:str):
+        self.type_label = type_label
+        self.label = label
+
+class MermaidClass(Subscriptable):
+    
+    def __init__(self, iri:str, label:str, stereotype:str):
+        self.iri = iri
+        self.id = get_id(iri)
+        self.namespace = extract_namespace(iri)
+        self.label = label
+        self.stereotype = stereotype
+        self.properties = []
+        
+    def add_property(self, property:MermaidProperty):
+        self.properties.append(property)
+
+class MermaidConnection(Subscriptable):
+    
+    INHERITANCE = 0
+    ASSOCIATION = 1
+    TARGET_CLASS = 2
+
+    def __init__(self, from_node:str, to_node:str, connection_type:int, label:str=""):
+        self.from_node = from_node
+        self.to_node = to_node
+        self.connection_type = connection_type
+        self.label = label
+        
+    def __eq__(self, other):
+        return self.from_node == other.from_node and self.to_node == other.to_node and self.label == other.label
+    
+    def __hash__(self):
+        return hash((self.from_node, self.to_node, self.label))
+
+class MermaidRenderer:
+    
+    def __init__(self, template_path: str = "./templates"):
+        self.env = Environment(
+            tolerance=Mode.STRICT,
+            undefined=StrictUndefined,
+            loader=FileSystemLoader(template_path),
+        )
+        
+    def render_model(self, model_iri:str) -> str:
+        log.info("Rendering model diagram for {}".format(model_iri))
+        s = SemanticModel(model_iri)
+        classes = []
+        connections = []
+        for c in s.get_classes():
+            cl, co = self.get_class_structure(c)
+            classes += cl
+            connections += co
+        for n in s.get_node_shapes():
+            cl, co = self.get_shape_structure(n)
+            classes += cl
+            connections += co
+        result = self.env.get_template("render.mermaid").render(
+            classes=classes,
+            connections=list(set(connections))
+        )
+        return result
+        
+    def get_class_structure(self, the_class:RdfClass) -> {}:
+        classes = []
+        connections = []
+        iri = the_class.iri
+        stereotype = ""
+        for t in the_class.get_types():
+            if stereotype == "":
+                stereotype += t
+            else:
+                stereotype += ', ' + t
+        result = MermaidClass(iri, the_class.label, stereotype)
+        classes.append(result)
+        for p in the_class.get_properties():
+            typestring = ""
+            is_scalar_type = False
+            for t in p.get_property_type():
+                if p.is_xsd_datatype() is True:
+                    is_scalar_type = True
+                if typestring == "":
+                    typestring += t
+                else:
+                    typestring += ', ' + t
+            if is_scalar_type is True:
+                result.add_property(MermaidProperty(typestring, p.label))
+            else:
+                    target = MermaidClass(p.iri, p.label, typestring)
+                    classes.append(target)
+                    connections.append(MermaidConnection(result.id, target.id, MermaidConnection.ASSOCIATION, p.label))                
+        for s in the_class.get_superclasses(False):
+            cl, cn = self.get_class_structure(s)
+            classes += cl
+            connections += cn
+            connections.append(MermaidConnection(get_id(the_class.iri), get_id(s.iri), MermaidConnection.INHERITANCE))
+        # TODO: add nodeshapes for which this class is the target class, but how much of the nodeshape diagram do we want to render? Full or just the nodeshape itself? definitely different colors?
+        for n in the_class.get_nodeshapes():
+            nl, nn = self.get_shape_structure(n)
+            classes += nl
+            connections += nn
+            connections.append(MermaidConnection(get_id(n.iri), get_id(the_class.iri), MermaidConnection.TARGET_CLASS))
+        return classes, list(set(connections))
+        
+    def get_shape_structure(self, the_shape:NodeShape) -> {}:
+        classes = []
+        connections = []
+        iri = the_shape.iri
+        stereotype = ""
+        for t in the_shape.get_types():
+            if stereotype == "":
+                stereotype += t
+            else:
+                stereotype += ', ' + t
+        result = MermaidClass(iri, the_shape.label, stereotype)
+        classes.append(result)
+        for p in the_shape.get_shacl_properties()+the_shape.get_inherited_shacl_properties():
+            tp = p.get_target_property()
+            label = p.label
+            if label == 'unnamed':
+                label = tp.label
+            typestring = p.xsd_datatype()
+            if p.is_object_reference() is False and typestring is not None and typestring != '':
+                result.add_property(MermaidProperty(typestring, label))
+            else:
+                    target = MermaidClass(tp.iri, label, p.class_datatype())
+                    classes.append(target)
+                    connections.append(MermaidConnection(result.id, target.id, MermaidConnection.ASSOCIATION, label))                
+        return classes, list(set(connections))
+    
+    def render_class(self, iri:str) -> str:
+        log.info("Rendering class diagram for {}".format(iri))
+        s = SemanticModel(iri)
+        classes = []
+        connections = []
+        for c in s.get_classes():
+            if c.iri == s.iri:
+                classes, connections = self.get_class_structure(c)
+        return self.env.get_template("render.mermaid").render(
+            classes=classes,
+            connections=connections
+        )
+        
+    def render_nodeshape(self, iri:str) -> str:
+        log.info("Rendering class diagram for {}".format(iri))
+        s = SemanticModel(iri)
+        classes = []
+        connections = []
+        for c in s.get_node_shapes():
+            if c.iri == s.iri:
+                classes, connections = self.get_shape_structure(c)
+        return self.env.get_template("render.mermaid").render(
+            classes=classes,
+            connections=connections
+        )
+  
 class JsonSchemaRenderer:
     def __init__(self, template_path: str = "./templates"):
         self.env = Environment(
@@ -174,6 +352,7 @@ class HtmlRenderer:
         self.env.add_filter("prune", prune_iri)
         self.env.add_filter("url", url)
         self.env.add_filter("markdown", md.markdown)
+        self.diagram_renderer = MermaidRenderer(template_path)
 
     def render_page(self, base_url: str, content: str) -> str:
         return self.env.get_template("render_page.html").render(
@@ -215,6 +394,11 @@ class HtmlRenderer:
             instances=instances,
             instance_classes=instance_classes,
         )
+        content += self.env.get_template("render_diagram.html").render(
+            url = base_url,
+            element = s, 
+            diagram = self.diagram_renderer.render_model(s.iri)
+        )        
         return self.render_page(base_url, content)
 
     def render_model_element(self, base_url: str, iri: str) -> str:
@@ -253,7 +437,7 @@ class HtmlRenderer:
                         prop_types[p.iri].append(t)
                 instances = c.get_instances()
                 instance_count = len(instances)
-                return self.env.get_template("render_class.html").render(
+                content = self.env.get_template("render_class.html").render(
                     url=base_url,
                     model=model,
                     model_iri=c.iri[0 : c.iri.rfind("/")],
@@ -267,6 +451,12 @@ class HtmlRenderer:
                     instances=instances,
                     instance_count=instance_count,
                 )
+                diagram = self.env.get_template("render_diagram.html").render(
+                    url = base_url,
+                    element = c, 
+                    diagram = self.diagram_renderer.render_class(c.iri)
+                )
+                return content + diagram
                 
     def render_predicates(self, element:SemanticModelElement) -> str:
         log.info("HTML rendering predicates for {}".format(element.iri))
@@ -325,7 +515,7 @@ class HtmlRenderer:
                         map(lambda n: n.iri, sp.get_nodeshapes())
                     )
                     prop_constraints[sp.iri] = sp.get_constraints()
-                return self.env.get_template("render_shape.html").render(
+                content = self.env.get_template("render_shape.html").render(
                     url=base_url,
                     model=model,
                     model_iri=n.iri[0 : n.iri.rfind("/")],
@@ -337,6 +527,13 @@ class HtmlRenderer:
                     shacl_prop_shapes=prop_shapes,
                     shacl_prop_constraints=prop_constraints,
                 )
+                diagram = self.env.get_template("render_diagram.html").render(
+                    url = base_url,
+                    element = n, 
+                    diagram = self.diagram_renderer.render_nodeshape(n.iri)
+                )
+                return content + diagram
+                
 
     def render_shacl_property(self, base_url: str, model: SemanticModel) -> str:
         log.info("HTML rendering SHACL property at {}".format(model.iri))

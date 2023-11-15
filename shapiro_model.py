@@ -221,9 +221,6 @@ class SemanticModelElement(Subscriptable):
         )
         predicates = []
         for r in result:
-            print("------------------------------------------------------------")
-            print(r.predicate, r.object, type(r.object))
-            print("------------------------------------------------------------")
             predicates.append(Predicate(str(r.predicate), self.graph, PredicateValue(str(r.object), self.graph)))
         return predicates
     
@@ -306,6 +303,18 @@ class RdfProperty(SemanticModelElement):
         """
     )
 
+    KIND_OF_QUERY = prepareQuery(
+        """
+        PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        SELECT DISTINCT ?result
+        WHERE
+        {
+            ?property rdf:type ?result .
+        }
+        """
+    )
+
     SHACL_PROP_QUERY = prepareQuery(
         """ 
             PREFIX sh:<http://www.w3.org/ns/shacl#>
@@ -327,6 +336,9 @@ class RdfProperty(SemanticModelElement):
             result.append(str(r.result))
         result.sort(key=lambda c: c)
         return result
+    
+    def get_property_kind(self) -> List[str]:
+        return self.query(self.KIND_OF_QUERY)
 
     def get_property_type(self) -> List[str]:
         return self.query(self.RANGE_QUERY)
@@ -347,6 +359,11 @@ class RdfProperty(SemanticModelElement):
         props.sort(key=lambda p: p.label)
         return props
 
+    def is_xsd_datatype(self) -> bool:
+        for t in self.get_property_type():
+            if 'xmlschema#' in t[t.rfind('/'):len(t)].lower():
+                return True
+        return False
 
 class NodeShape(SemanticModelElement):
     SHACL_PROP_QUERY = prepareQuery(
