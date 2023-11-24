@@ -57,6 +57,12 @@ class MermaidProperty(Subscriptable):
         self.type_label = type_label
         self.label = label
 
+    def __eq__(self, other):
+        return self.type_label == other.type_label and self.label == other.label
+    
+    def __hash__(self):
+        return hash((self.type_label, self.label))
+
 class MermaidClass(Subscriptable):
     
     def __init__(self, iri:str, label:str, stereotype:str):
@@ -69,6 +75,12 @@ class MermaidClass(Subscriptable):
         
     def add_property(self, property:MermaidProperty):
         self.properties.append(property)
+
+    def __eq__(self, other):
+        return self.iri == other.iri
+    
+    def __hash__(self):
+        return hash(self.iri)
 
 class MermaidConnection(Subscriptable):
     
@@ -111,7 +123,7 @@ class MermaidRenderer:
             classes += cl
             connections += co
         result = self.env.get_template("render.mermaid").render(
-            classes=classes,
+            classes=list(set(classes)),
             connections=list(set(connections))
         )
         return result

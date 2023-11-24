@@ -689,12 +689,13 @@ class ShaclProperty(SemanticModelElement):
         return None  # no mapping found, return None meaning no constraint is put in JSON-SCHEMA
 
     def get_target_property(self) -> RdfProperty:
-        target_prop_iri = list(
+        targets = list(
             filter(lambda c: c.constraint_iri.endswith("path"), self.get_constraints())
-        )[
-            0
-        ].value  # there must be one
-        return RdfProperty(target_prop_iri, self.graph)
+        )
+        target_iri = self.iri
+        if len(targets) > 0:
+            target_iri = targets[0].value
+        return RdfProperty(target_iri, self.graph)
 
     def get_iri(self) -> str:
         # if this SHACL property is a blank node, then return the iri of the target property, otherwise return the original iri of this property

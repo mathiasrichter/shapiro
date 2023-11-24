@@ -1,0 +1,26 @@
+@prefix : <http://127.0.0.1:8000/com/example/org/class_with_props_in_other_model/> .
+@prefix p: <http://127.0.0.1:8000/com/example/org/prop_used_in_other_model/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+
+:SomeClass a rdfs:Class ;
+    rdfs:label "SomeClass" ;
+    rdfs:comment "A class with one property from another model and one from this model." ;
+.
+
+:someProp a rdf:Property ;
+    rdfs:label "SomeProp" ;
+    rdfs:comment "A property for Someclass." ;
+    rdfs:domain :SomeClass ;
+    rdfs:range xsd:string ;
+    sh:datatype xsd:string ;
+    sh:path :someProp ;
+.
+
+:SomeClassShape a sh:NodeShape ;
+    sh:targetClass :SomeClass ;
+    sh:property :someProp, p:dateProp;
+.
