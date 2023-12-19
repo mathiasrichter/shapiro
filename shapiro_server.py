@@ -63,6 +63,8 @@ HTML_RENDERER = HtmlRenderer()
 
 JSONSCHEMA_RENDERER = JsonSchemaRenderer()
 
+HOME = os.path.dirname(__file__) # no trailing path separator
+
 log = get_logger("SHAPIRO_SERVER")
 
 app = FastAPI()
@@ -70,7 +72,7 @@ app = FastAPI()
 env = Environment(
     tolerance=Mode.STRICT,
     undefined=StrictUndefined,
-    loader=FileSystemLoader("templates/"),
+    loader=FileSystemLoader(HOME + "/templates/")
 )
 
 
@@ -275,7 +277,7 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
 
 def get_version():
     version = { 'version': '' }
-    with open('version.txt', 'r') as f:
+    with open(HOME + '/version.txt', 'r') as f:
         version['version'] = f.read().replace('\n','')
     return version
 
@@ -309,7 +311,7 @@ async def get_static_resource(name: str):
     """
     Serve static artefacts for HTML views.
     """
-    name = "static/" + name
+    name = HOME + "/static/" + name
     mime = "text/html"
     if name.endswith(".png"):
         mime = "image/png"
