@@ -299,7 +299,7 @@ class JsonSchemaRenderer:
             if self.is_conflict(properties, prop) == False:
                 properties.append(prop)
             else:
-                msg = "Cannot produce well-formed JSON-SCHEMA: The SHACL property for {} defined in shape {} conflicts with another SHACL property for the same {} defined in another shape.".format(
+                msg = "Cannot produce well-formed JSON-SCHEMA: The SHACL property for {} defined in shape {} conflicts with another SHACL property for the same {} defined in the same shape or another shape.".format(
                     prop["name"],
                     list(map(lambda s: s.iri, p.get_nodeshapes())),
                     prop["name"],

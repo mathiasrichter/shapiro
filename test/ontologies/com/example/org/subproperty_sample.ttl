@@ -1,0 +1,58 @@
+# https://stackoverflow.com/questions/68072205/shacl-handling-of-rdfssubpropertyof
+
+@prefix : <http://127.0.0.1:8000/com/example/org/subproperty_sample/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+:minmaxTextProperty a rdfs:Property, sh:PropertyShape;
+    sh:datatype xsd:string;
+    sh:minLength 1;
+    sh:maxLength 35;
+.
+
+:ItemFormalName a rdf:Property, sh:PropertyShape;
+    rdfs:label "ItemFormalName";
+    rdfs:comment "The name of an item";
+    rdfs:subPropertyOf :minmaxTextProperty ;
+.
+
+:ItemNickName a rdf:Property, sh:PropertyShape;
+    rdfs:label "ItemNickName";
+    rdfs:comment "The nick name of an item";
+    rdfs:subPropertyOf :minmaxTextProperty ;
+.
+
+:ItemA a rdfs:Class, sh:NodeShape;
+    rdfs:label "ItemA";
+    rdfs:comment "An Item has two properties declared using named shacl properties. This just uses the constraints declared on the properties.";
+    sh:property :ItemFormalName, :ItemNickName ;
+.
+
+:ItemB a rdfs:Class, sh:NodeShape;
+    rdfs:label "ItemB";
+    rdfs:comment "An Item has two properties declared using sh:property in combination with sh:path, which allows the addition of constraints not declared on the named properties. This results in 'anonymous' shacl properties on the node shape.";
+    sh:property [
+        sh:path :ItemFormalName;
+        sh:maxCount 1;
+    ];
+    sh:property [
+        sh:path :ItemNickName;
+        sh:maxCount 1;
+    ];
+.
+
+:ItemC a rdfs:Class, sh:NodeShape;
+    rdfs:label "ItemC";
+    rdfs:comment "An Item has two properties declared using a mix of the approaches used in ItemA and ItemB. This will produce a conflict (status 422) when generating JSON-SCHEMA as there are multiple, potentially conflicting definitions of property 'ItemFormalName' and 'ItemNickName'.";
+    sh:property :ItemFormalName, :ItemNickName ;
+    sh:property [
+        sh:path :ItemFormalName;
+        sh:maxCount 1;
+    ];
+    sh:property [
+        sh:path :ItemNickName;
+        sh:maxCount 1;
+    ];
+.

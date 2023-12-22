@@ -28,10 +28,10 @@
 :enumExampleName a rdfs:Property ;
     rdfs:label "enumExampleName" ;
     rdfs:comment "An example property to test string enums correctly" ;
-     sh:path :enumExampleName ;
-        sh:datatype xsd:string ;
-        sh:in ("Jane" "John" "Joe" "Janet") ;
-        .
+    sh:path :enumExampleName ;
+    sh:datatype xsd:string ;
+    sh:in ("Jane" "John" "Joe" "Janet") ;
+.
 
 :enumExampleFavoriteNumber a rdfs:Property ;
     rdfs:label "enumExampleFavoriteNumber" ;

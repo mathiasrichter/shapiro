@@ -1,0 +1,44 @@
+@prefix : <http://127.0.0.1:8000/com/example/org/duplicate_constraint_sample_jsonschema/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix schema: <http://schema.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# This is a model covering test cases for JSON-SCHEMA generation
+# from a semantic model where the same property has duplicate SHACL constraint declarations, once on the rdfs:Property
+# and once on the sh:property
+
+
+:EnumExample a rdfs:Class ;
+    rdfs:label "EnumExample" ;
+    rdfs:comment "An example class to test enums correctly" ;
+.
+
+:otherProp a rdfs:Property ;
+    rdfs:label "otherProp" ;
+    rdfs:comment "Another property" ;
+.
+
+:enumExampleName a rdfs:Property ;
+    rdfs:label "enumExampleName" ;
+    rdfs:comment "An example property to test string enums correctly" ;
+    sh:path :enumExampleName ;
+    sh:datatype xsd:string ;
+    sh:in ("Jane" "John" "Joe" "Janet") ;
+.
+
+:EnumExampleShape a sh:NodeShape ;
+    sh:targetClass :EnumExample ;
+    sh:property [ # TODO: this will always prevail over the duplicate definition on the rdfs property :enumExampleName
+        sh:path :enumExampleName ;
+        sh:datatype xsd:string ;
+        sh:in ("Jane" "John" "Joe" "Janet") ;
+    ] ;
+    sh:property [
+        sh:path :otherProp ;
+        sh:datatype xsd:string ;
+        sh:in ("Alpha" "Beta" "Gamma") ;
+    ] ;
+.
+

@@ -570,11 +570,13 @@ class ShaclConstraint(Subscriptable):
         return None
 
     def needs_quotes(self) -> bool:
-        if self.is_enum:
-            return self.parent.get_json_schema_type()[0] not in UNQUOTED_TYPES
-        return self.get_json_schema_name() not in NUMERIC_CONSTRAINTS
-
-
+        try:
+            if self.is_enum:
+                return self.parent.get_json_schema_type()[0] not in UNQUOTED_TYPES
+            return self.get_json_schema_name() not in NUMERIC_CONSTRAINTS            
+        except: #TODO: need to deal with duplicate constraints - see "duplicate_constraint_sample_jsonschema.ttl"
+            return True
+        
 class ShaclProperty(SemanticModelElement):
     SHAPE_QUERY = prepareQuery(
         """ 
@@ -589,15 +591,17 @@ class ShaclProperty(SemanticModelElement):
 
     SHACL_CONSTRAINTS_QUERY = prepareQuery(
         """ 
-                SELECT DISTINCT ?property ?constraint ?value
-                WHERE
+            SELECT DISTINCT ?property ?constraint ?value
+            WHERE
+            {
                 {
                     ?property ?constraint ?value .
                     FILTER(STRSTARTS(STR(?constraint), "http://www.w3.org/ns/shacl#")) .
                 }
-                """
+            }    
+        """
     )
-
+    
     SHACL_IN_QUERY = prepareQuery(
         """
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -605,23 +609,51 @@ class ShaclProperty(SemanticModelElement):
 
                 SELECT  ?source ?item
                 WHERE {
-                ?source sh:in/rdf:rest*/rdf:first ?item
+                    ?source sh:in/rdf:rest*/rdf:first ?item
                 }
             """
+    )
+
+    TRANSITIVE_SUPERPROPERTIES_QUERY = prepareQuery(
+        """
+        PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+        
+        SELECT DISTINCT ?superproperty
+        WHERE
+        {
+            {
+                ?subproperty rdfs:subPropertyOf* ?superproperty .
+            }
+            UNION
+            {
+                ?subproperty sh:path ?property.
+                ?property rdfs:subPropertyOf* ?superproperty .
+            }
+        }
+        """
     )
 
     def __init__(self, iri: str, graph: Graph):
         super().__init__(iri, graph)
 
-    def get_constraints(self) -> List[ShaclConstraint]:
-        prop = None
-        if urlparse(self.iri).scheme == "":  #  if this is a blank node
-            prop = BNode(self.iri)
+    def get_node(self, iri:str):
+        if urlparse(iri).scheme == "":  #  if iri is a blank node
+            return BNode(iri)
         else:
-            prop = URIRef(self.iri)
-        result = self.graph.query(
-            self.SHACL_CONSTRAINTS_QUERY, initBindings={"property": prop}
+            return URIRef(iri)        
+
+    def get_constraints(self) -> List[ShaclConstraint]:
+        props = []
+        result = self.graph.query( # get prop and potential super-properties
+            self.TRANSITIVE_SUPERPROPERTIES_QUERY, initBindings={"subproperty": self.get_node(self.iri)}
         )
+        for r in result:
+            props.append(str(r.superproperty))
+        result = []
+        for p in props: # get all constraints including those from super-properties
+            result += self.graph.query(
+                self.SHACL_CONSTRAINTS_QUERY, initBindings={"property": self.get_node(str(p))}
+            )
         constraints = []
         for r in result:
             p = str(r.property)

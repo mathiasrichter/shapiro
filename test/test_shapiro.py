@@ -498,6 +498,36 @@ def test_enums_with_json_schema():
     assert response.headers["content-type"].startswith(mime)
     assert response.status_code == 200
 
+def test_subproperty_option_1_with_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "http://127.0.0.1:8000/com/example/org/subproperty_sample/ItemA",
+        headers={"accept": mime},
+    )
+    response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
+
+def test_property_conflict_as_json_schema():
+    #TODO: this test should check whether the implementation works with duplicate constrints, but it does not yet
+    mime = "application/schema+json"
+    response = client.get(
+        "http://127.0.0.1:8000/com/example/org/duplicate_constraint_sample_jsonschema/EnumExampleShape",
+        headers={"accept": mime},
+    )
+    assert response.status_code == 200
+
+
+    
+def test_subproperty_option_2_with_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "http://127.0.0.1:8000/com/example/org/subproperty_sample/ItemB",
+        headers={"accept": mime},
+    )
+    response.json()  # ensure JSON-SCHEMA generated is proper JSON
+    assert response.headers["content-type"].startswith(mime)
+    assert response.status_code == 200
 
 def test_get_existing_nodeshape_with_inheritance_conflict_as_json_schema():
     mime = "application/schema+json"
@@ -507,6 +537,13 @@ def test_get_existing_nodeshape_with_inheritance_conflict_as_json_schema():
     )
     assert response.status_code == 422
 
+def test_subproperty_conflict_as_json_schema():
+    mime = "application/schema+json"
+    response = client.get(
+        "http://127.0.0.1:8000/com/example/org/subproperty_sample/ItemC",
+        headers={"accept": mime},
+    )
+    assert response.status_code == 422
 
 def test_get_existing_nodeshape_with_inheritance_as_json_schema():
     mime = "application/schema+json"
