@@ -23,7 +23,8 @@
   - [Searching Shapiro](#searching-shapiro)
   - [Shapiro UI](#shapiro-ui)
   - [Writing Semantic Models to be served by Shapiro](#writing-semantic-models-to-be-served-by-shapiro)
-  - [Installing and running Shapiro](#installing-and-running-shapiro)
+  - [Installing Shapiro](#installing-shapiro)
+  - [Running Shapiro](#running-shapiro)
 
 ## What is Shapiro                                                      
 Shapiro is a simple ontology/vocabulary server serving turtle, json-ld, html or json-schema (as indicated by the requesting client in the accept-header). It therefore provides a simple approach to serving up an organization's ontologies/vocabularies.
@@ -109,13 +110,34 @@ Given the number of possibilities to use ontologies & vocabularies for your mode
 - Use SHACL for constraints. Shapiro cannot validate your data against models, if you use anything else and it cannot convert semantic models to JSON-SCHEMA otherwise. Of course, Shapiro will also render SHACL constraints in HTML.
 - JSON-SCHEMA conversion requires your model defining NodeShapes with the appropriate SHACL properties and constraints. Shapiro will render empty schemas if you ask for JSON-SCHEMA of an RDFS class.
 
-## Installing and running Shapiro
+## Installing Shapiro
 1. Clone the Shapiro repository.
 2. Install dependencies: `pip install -r requirements.txt`
-4. Run Shapiro Server: `python shapiro_server.py` with optional commandline paramaters `--host`(default 127.0.0.1) `--port`(default 8000), `--content_dir`(default `./`) and `--log_level`(default `info`), `--features` (default `all`), `--ignore_namespaces` (default `['schema.org', 'w3.org', 'example.org']`, `--index_dir` (default `./fts_index/').
-5. Access the UI at `http://localhost:8000/welcome/`
-6. Access the API docs at `http://localhost:8000/docs`
-7. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
-8. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.
+
+## Running Shapiro
+1. Run Shapiro Server: `python shapiro_server.py` with commandline parameters as per parameter reference
+2. Access the UI at `http://localhost:8000/welcome/`
+3. Access the API docs at `http://localhost:8000/docs`
+4. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: application/ld+json'` to get JSON-LD from a schema in the content dir
+5. Try `curl -X 'GET' 'http://localhost:8000/<SCHEMANAME HERE>' -H 'accept-header: text/turtle'` to get JSON-LD from a schema in the content dir.
+
+Commandline Parameter Reference
+
+| Parameter | Description                 | 
+|:----------|:----------------------------|
+|`--host`|The host for uvicorn to use. Defaults to 127.0.0.1|
+|`--port`|The port for the server to receive requests on. Defaults to 8000.|
+|`--domain`|The domain that Shapiro uses to build its BASE_URL.<br>Defaults to '127.0.0.1:8000' and is typically set to the domain name under which you deploy Shapiro.<br>This is what Shapiro uses to ensure schemas are rooted on its server, to build links in the HTML docs  and it's also the URL Shapiro uses to resolve static resources in HTML renderings.<br>Include the port if needed. Examples: --domain schemas.myorg.com, --domain schemas.myorg.com:1234|
+|`--content_dir`|The content directory to be used. Defaults to "./". If you specify parameters for a GitHub user and repo, then this is the path of the content directory relative to the repository. If you're using GitHub to serve schemas from, this would be relative to the repository's root directory.|
+|`--log_level`|The log level to run with. Defaults to "info"|
+|`--default_mime`|The mime type to use if the requested mimetype in the accept header is not available or usable. Defaults to "text/turtle".|
+|`--features`|What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate'(for validating data against ontologies) or 'all'. Default is 'all'.<br>This allows to run multiple instances of Shapiro for separate purposes (serving schemas, validation).|
+|`--ignore_namespaces`|A list of namespaces that will be ignored when inferring schemas to validate data against. <br>Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']|
+|`--index_dir`|The directory where Shapiro stores the full-text-search indices. Default is ./fts_index|
+|`--ssl_keyfile`<br>`--ssl_certfile`<br>`--ssl_ca_certs`|If these are set, Shapiro uses SSL. No defaults.|
+|`--github_user`<br>`--github_repo`|If these are set, Shapiro serves schemas from the content dir in this repo.|
+|`--github_branch`|Set this to use a specific branch in your git hub repo (if github repo and github user parameters are specified). Defaults to the GitHub repo's default branch.|
+|`--github_token`|The access token for the GitHub repo (if guthub repo and github user parameters are specified). If no value is specified, no authentication is used with GitHub (which will limit the number of requests that can be made through the API).|
+
 
 Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, domain, content dir, log level, default mime type, features, ignore namespaces, index directory, and if needed ssl-parameters).

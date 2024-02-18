@@ -26,7 +26,18 @@ from liquid import Mode
 from liquid import StrictUndefined
 from liquid import FileSystemLoader
 from shapiro_render import HtmlRenderer, JsonSchemaRenderer
-from shapiro_util import BadSchemaException, NotFoundException, ConflictingPropertyException, get_logger
+from shapiro_util import (
+    BadSchemaException,
+    NotFoundException,
+    ConflictingPropertyException,
+    get_logger
+)
+from shapiro_content import (
+    ContentAdaptor,
+    FileSystemAdaptor,
+    GitHubAdaptor,
+    GitHubException
+)
 from multiprocessing import Process
 
 MIME_HTML = "text/html"
@@ -63,7 +74,9 @@ HTML_RENDERER = HtmlRenderer()
 
 JSONSCHEMA_RENDERER = JsonSchemaRenderer()
 
-HOME = os.path.dirname(__file__) # no trailing path separator
+CONTENT_ADAPTOR = None
+
+HOME = os.path.dirname(__file__)  # no trailing path separator
 
 log = get_logger("SHAPIRO_SERVER")
 
@@ -72,7 +85,7 @@ app = FastAPI()
 env = Environment(
     tolerance=Mode.STRICT,
     undefined=StrictUndefined,
-    loader=FileSystemLoader(HOME + "/templates/")
+    loader=FileSystemLoader(HOME + "/templates/"),
 )
 
 
@@ -83,8 +96,9 @@ class SchemaHousekeeping(Thread):
     for long times while schemas get added/removed in the file system.
     """
 
-    def __init__(self, sleep_seconds):
+    def __init__(self, content_adaptor: ContentAdaptor, sleep_seconds):
         Thread.__init__(self)
+        self.content_adaptor = content_adaptor
         self.sleep_seconds = sleep_seconds
         self.last_execution_time = None
         self.stopped = Event()
@@ -99,17 +113,14 @@ class SchemaHousekeeping(Thread):
 
     def check_for_schema_updates(self):
         log.info("Housekeeping: Checking schema files for modifications.")
-        schemas_to_check = walk_schemas(CONTENT_DIR, self.check_schema)
+        schemas_to_check = self.content_adaptor.get_changed_files(
+            CONTENT_DIR, self.last_execution_time
+        )
         log.info(
             "Housekeeping detected {} modified schemas.".format(len(schemas_to_check))
         )
         self.last_execution_time = datetime.now()
         self.perform_housekeeping_on(schemas_to_check)
-
-    def check_schema(self, path: str, full_name: str, schema_path: str, suffix: str):
-        mod_time = datetime.fromtimestamp(os.stat(full_name).st_mtime)
-        if self.last_execution_time is None or self.last_execution_time < mod_time:
-            return full_name
 
     @abstractmethod
     def perform_housekeeping_on(self, schemas: List[str]):
@@ -128,8 +139,10 @@ class EKGHouseKeeping(SchemaHousekeeping):
     can be queried in its entirety using SPARQL.
     """
 
-    def __init__(self, sleep_seconds: float = 60.0 * 10.0):
-        super().__init__(sleep_seconds)
+    def __init__(
+        self, content_adaptor: ContentAdaptor, sleep_seconds: float = 60.0 * 10.0
+    ):
+        super().__init__(content_adaptor, sleep_seconds)
 
     def perform_housekeeping_on(self, schemas: List[str]):
         """
@@ -140,22 +153,33 @@ class EKGHouseKeeping(SchemaHousekeeping):
         if EKG is None or len(schemas) > 0:
             log.info("EKG Housekeeping: Rebuilding knowledge graph.")
             EKG = Graph()
-            walk_schemas(CONTENT_DIR, self.add_schema)
+            for s in schemas:
+                self.add_schema(s)
 
-    def add_schema(self, path: str, full_name: str, schema_path: str, suffix: str):
-        if full_name not in BAD_SCHEMAS.keys():
+    def add_schema(self, filepath: str):
+        if (
+            filepath not in BAD_SCHEMAS.keys()
+            and get_suffix(filepath) in SUPPORTED_SUFFIXES
+        ):
             try:
-                with open(full_name, "r") as f:
-                    EKG.parse(file=f)
+                content_format = get_suffix(filepath)
+                if content_format == SUFFIX_JSONLD:
+                    content_format = "json-ld"
+                if content_format.startswith("."):
+                    content_format = content_format[1 : len(content_format)]
+                EKG.parse(
+                    data=self.content_adaptor.get_content(filepath),
+                    format=content_format,
+                )
                 log.info(
                     "EKG Housekeeping: Ingested '{}' into knowledge graph.".format(
-                        full_name
+                        filepath
                     )
                 )
             except Exception as x:
                 log.error(
                     "EKG Housekeeping: Could not ingest '{}' into knowledge graph: {}".format(
-                        schema_path, x
+                        filepath, x
                     )
                 )
 
@@ -165,8 +189,10 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
     Regularly check for bad schemas.
     """
 
-    def __init__(self, sleep_seconds: float = 60.0 * 10.0):
-        super().__init__(sleep_seconds)
+    def __init__(
+        self, content_adaptor: ContentAdaptor, sleep_seconds: float = 60.0 * 10.0
+    ):
+        super().__init__(content_adaptor, sleep_seconds)
 
     def perform_housekeeping_on(self, schemas: List[str]):
         """
@@ -176,61 +202,62 @@ class BadSchemaHousekeeping(SchemaHousekeeping):
         """
         global BAD_SCHEMAS
         for full_name in schemas:
-            try:
-                g = Graph().parse(full_name)
-                found = False
-                schema_path = get_schema_path(full_name)
-                if schema_path.startswith("/"):
-                    path = (
-                        BASE_URL + schema_path[1 : len(schema_path)]
-                    )  # skip leading '/' of schema path
-                else:
-                    path = BASE_URL + schema_path
-                for s, p, o in g:
-                    # want to be sure that the schema refers back to this server
-                    # at least once in an RDF-triple
+            if get_suffix(full_name) in SUPPORTED_SUFFIXES:
+                try:
+                    g = Graph().parse(data=CONTENT_ADAPTOR.get_content(full_name), format=get_rdflib_content_type(full_name))
+                    found = False
+                    schema_path = get_schema_path(full_name)
+                    if schema_path.startswith("/"):
+                        path = (
+                            BASE_URL + schema_path[1 : len(schema_path)]
+                        )  # skip leading '/' of schema path
+                    else:
+                        path = BASE_URL + schema_path
+                    for s, p, o in g:
+                        # want to be sure that the schema refers back to this server
+                        # at least once in an RDF-triple
+                        if found is False:
+                            found = (
+                                str(s).lower().find(path.lower()) > -1
+                                or str(p).lower().find(path.lower()) > -1
+                                or str(o).lower().find(path.lower()) > -1
+                            )
+                        if found is True:
+                            break
                     if found is False:
-                        found = (
-                            str(s).lower().find(path.lower()) > -1
-                            or str(p).lower().find(path.lower()) > -1
-                            or str(o).lower().find(path.lower()) > -1
+                        raise Exception(
+                            "Bad Schema Housekeeping: Schema '{}' doesn't seem to have any origin on this server or is not in the right directory on this server.".format(
+                                path
+                            )
                         )
-                    if found is True:
-                        break
-                if found is False:
-                    raise Exception(
-                        "Bad Schema Housekeeping: Schema '{}' doesn't seem to have any origin on this server or is not in the right directory on this server.".format(
-                            path
-                        )
-                    )
-                if full_name in BAD_SCHEMAS.keys():
-                    del BAD_SCHEMAS[
-                        full_name
-                    ]  # it was a bad schema, but changed and now is a good schema
-                    log.info(
-                        "Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(
-                            full_name, BAD_SCHEMAS.keys()
-                        )
-                    )
-            except Exception as x:
-                log.warning(
-                    "Bad Schema Housekeeping: Detected issues with schema '{}':{}".format(
-                        full_name, x
-                    )
-                )
-                if full_name not in BAD_SCHEMAS.keys():
-                    BAD_SCHEMAS[full_name] = str(x)
-                    log.info(
-                        "Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(
-                            full_name, BAD_SCHEMAS.keys()
-                        )
-                    )
-                else:
-                    log.info(
-                        "Bad Schema Housekeeping: {} already in list of bad schemas.".format(
+                    if full_name in BAD_SCHEMAS.keys():
+                        del BAD_SCHEMAS[
                             full_name
+                        ]  # it was a bad schema, but changed and now is a good schema
+                        log.info(
+                            "Bad Schema Housekeeping: Removed {} from list of bad schemas. BAD_SCHEMAS is now {}".format(
+                                full_name, BAD_SCHEMAS.keys()
+                            )
+                        )
+                except Exception as x:
+                    log.warning(
+                        "Bad Schema Housekeeping: Detected issues with schema '{}':{}".format(
+                            full_name, x
                         )
                     )
+                    if full_name not in BAD_SCHEMAS.keys():
+                        BAD_SCHEMAS[full_name] = str(x)
+                        log.info(
+                            "Bad Schema Housekeeping: Appended {} to list of bad schemas. BAD_SCHEMAS is now {}".format(
+                                full_name, BAD_SCHEMAS.keys()
+                            )
+                        )
+                    else:
+                        log.info(
+                            "Bad Schema Housekeeping: {} already in list of bad schemas.".format(
+                                full_name
+                            )
+                        )
 
 
 class SearchIndexHousekeeping(SchemaHousekeeping):
@@ -238,8 +265,13 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
     Regularly index new or changed schemas in the search index for providing full text search in schemas.
     """
 
-    def __init__(self, index_dir: str = INDEX_DIR, sleep_seconds: float = 60.0 * 10.0):
-        super().__init__(sleep_seconds)
+    def __init__(
+        self,
+        content_adaptor: ContentAdaptor,
+        index_dir: str = INDEX_DIR,
+        sleep_seconds: float = 60.0 * 10.0,
+    ):
+        super().__init__(content_adaptor, sleep_seconds)
         schema = Schema(
             full_name=ID(stored=True), content=TEXT(analyzer=StemmingAnalyzer())
         )
@@ -269,17 +301,20 @@ class SearchIndexHousekeeping(SchemaHousekeeping):
         """
         writer = self.index.writer()
         for s in schemas:
-            if s not in BAD_SCHEMAS.keys():
-                with open(s, "r") as f:
-                    log.info("Full-text Search Housekeeping: Indexing {}".format(s))
-                    writer.update_document(full_name=s, content=f.read())
+            if s not in BAD_SCHEMAS.keys() and get_suffix(s) in SUPPORTED_SUFFIXES:
+                log.info("Full-text Search Housekeeping: Indexing {}".format(s))
+                writer.update_document(
+                    full_name=s, content=self.content_adaptor.get_content(s)
+                )
         writer.commit()
 
+
 def get_version():
-    version = { 'version': '' }
-    with open(HOME + '/version.txt', 'r') as f:
-        version['version'] = f.read().replace('\n','')
+    version = {"version": ""}
+    with open(HOME + "/version.txt", "r") as f:
+        version["version"] = f.read().replace("\n", "")
     return version
+
 
 @app.on_event("startup")
 def init():
@@ -291,11 +326,11 @@ def init():
         )
     )
     global HOUSEKEEPERS
-    b = BadSchemaHousekeeping()
+    b = BadSchemaHousekeeping(CONTENT_ADAPTOR)
     b.check_for_schema_updates()  # run once synchronously so all other housekeepers can ignore quarantined schemas
     HOUSEKEEPERS.append(b)
-    HOUSEKEEPERS.append(SearchIndexHousekeeping())
-    HOUSEKEEPERS.append(EKGHouseKeeping())
+    HOUSEKEEPERS.append(SearchIndexHousekeeping(CONTENT_ADAPTOR))
+    HOUSEKEEPERS.append(EKGHouseKeeping(CONTENT_ADAPTOR))
     for h in HOUSEKEEPERS:
         h.start()
 
@@ -331,8 +366,11 @@ async def welcome(request: Request):
     """
     Render a welcome page.
     """
-    welcome_page = env.get_template("main.html").render(url=BASE_URL, version=get_version()['version'])
+    welcome_page = env.get_template("main.html").render(
+        url=BASE_URL, version=get_version()["version"]
+    )
     return HTMLResponse(content=welcome_page)
+
 
 @app.get("/version/", status_code=200)
 async def version(request: Request):
@@ -347,15 +385,25 @@ async def get_schema_list(request: Request):
     Return a list of the schemas hosted in this repository as JSON-data.
     """
     log.info("Retrieving list of schemas")
-    result = walk_schemas(
-        CONTENT_DIR,
-        lambda path, full_name, schema_path, suffix: {
-            "schema_path": schema_path,
-            "full_name": full_name,
-            "link": str(BASE_URL) + schema_path,
-        }
-        if full_name not in BAD_SCHEMAS.keys()
-        else None,
+    schemas = CONTENT_ADAPTOR.get_changed_files(CONTENT_DIR)
+    # filter out files with unsupported suffixes
+    schemas = list(
+        filter(
+            lambda s: s if s not in BAD_SCHEMAS.keys() and get_suffix(s) in SUPPORTED_SUFFIXES
+            else None,
+            schemas
+        )
+    )
+    # map to data structure required by the JS/HTML table
+    result = list(
+        map( lambda s:
+            {
+                "schema_path": get_schema_path(s),
+                "full_name": s,
+                "link": str(BASE_URL) + get_schema_path(s),
+            },
+            schemas
+        )
     )
     return JSONResponse(content={"schemas": result})
 
@@ -468,7 +516,7 @@ def get_schema(
         )
     )
     if schema_path.endswith("/"):
-        schema_path = schema_path[0:len(schema_path)-1]
+        schema_path = schema_path[0 : len(schema_path) - 1]
     try:
         result = resolve(accept_header, schema_path)
         if result is None:
@@ -513,10 +561,22 @@ def get_schema(
             )
         else:
             return JSONResponse(
-                content={"err_msg": str(x)}, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+                content={"err_msg": str(x)},
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
-def get_schema_graph(url:str, schema_path:str) -> Graph:
+def get_rdflib_content_type(filename:str) -> str:
+    result = 'unknown'
+    s = get_suffix(filename)
+    for ss in SUPPORTED_SUFFIXES:
+        if s.lower() == ss.lower():
+            if s == SUFFIX_JSONLD:
+                result = 'json-ld'
+            else:
+                result = s[1:len(s)]
+    return result            
+
+def get_schema_graph(url: str, schema_path: str) -> Graph:
     schema_graph = None
     elems = schema_path.split("/")
     url_parsed = urlparse(url)
@@ -541,12 +601,15 @@ def get_schema_graph(url:str, schema_path:str) -> Graph:
         mod_schema_path = schema_path
         if url_parsed.netloc in schema_path:
             mod_schema_path = schema_path[
-                schema_path.find(url_parsed.netloc) + len(url_parsed.netloc) : len(schema_path)
+                schema_path.find(url_parsed.netloc)
+                + len(url_parsed.netloc) : len(schema_path)
             ]
         elif alt_netloc in schema_path:
             mod_schema_path = schema_path[
                 schema_path.find(alt_netloc) + len(alt_netloc) : len(schema_path)
             ]
+        if mod_schema_path.startswith("/"):
+            mod_schema_path = mod_schema_path[1 : len(mod_schema_path)]
         schema_response = get_schema(mod_schema_path, MIME_TTL)
         if schema_response.status_code == status.HTTP_404_NOT_FOUND:
             raise Exception(
@@ -561,6 +624,7 @@ def get_schema_graph(url:str, schema_path:str) -> Graph:
             schema_graph.parse(schema, format="ttl")
             log.info("Resolving local schema at '{}'".format(schema_path))
     return schema_graph
+
 
 @app.post("/validate/{schema_path:path}", status_code=200)
 async def validate(schema_path: str, request: Request):
@@ -645,13 +709,25 @@ async def validate_infer_model(request: Request, data_graph: Graph, data_format:
     schema_graphs = []
     for s, p, o in data_graph:
         iri = str(s)
-        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
+        if (
+            iri is not None
+            and iri.lower().startswith("http")
+            and iri not in schema_graphs
+        ):
             schema_graphs.append(iri)
         iri = str(p)
-        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
+        if (
+            iri is not None
+            and iri.lower().startswith("http")
+            and iri not in schema_graphs
+        ):
             schema_graphs.append(iri)
         iri = str(o)
-        if iri is not None and iri.lower().startswith("http") and iri not in schema_graphs:
+        if (
+            iri is not None
+            and iri.lower().startswith("http")
+            and iri not in schema_graphs
+        ):
             schema_graphs.append(iri)
     for i in IGNORE_NAMESPACES:
         schema_graphs_copy = schema_graphs.copy()
@@ -668,7 +744,8 @@ async def validate_infer_model(request: Request, data_graph: Graph, data_format:
     for s in schema_graphs:
         log.info("Getting schema graph {}".format(s))
         schema_graph += get_schema_graph(request.url._url, s)
-    return await validate(s, request)  
+    return await validate(s, request)
+
 
 def resolve(accept_header: str, path: str):
     """
@@ -679,9 +756,7 @@ def resolve(accept_header: str, path: str):
     filename = map_filename(path)
     if filename is None:
         return None
-    f = open(filename, "r")
-    content = f.read()
-    f.close()
+    content = CONTENT_ADAPTOR.get_content(filename)
     result = convert(path, filename, content, mime_type)
     return result
 
@@ -756,13 +831,13 @@ def map_filename(path: str):
     full_path = CONTENT_DIR + path
     for s in SUPPORTED_SUFFIXES:
         current = full_path + s
-        if os.path.isfile(current):
+        if CONTENT_ADAPTOR.is_file(current):  # os.path.isfile(current):
             candidates.append(current)
     # it is not, so assume that last element of the path is an element in the file
     pruned_path = full_path[0 : full_path.rfind("/")]
     for s in SUPPORTED_SUFFIXES:
         current = pruned_path + s
-        if os.path.isfile(current):
+        if CONTENT_ADAPTOR.is_file(current):  # os.path.isfile(current):
             candidates.append(current)
     if len(candidates) == 1:
         return candidates[0]
@@ -860,33 +935,6 @@ def get_schema_path(full_name: str):
     """
     return full_name[len(CONTENT_DIR) : len(full_name) - len(get_suffix(full_name))]
 
-
-def walk_schemas(content_dir: str, visit_schema):
-    """
-    Walk the hierarchy at content_dir and call the function specified under visit_schema.
-    visit_schema is a function that takes four string parameters: path (the hierarchical name the schema sits under,
-    without the actual schema name), full_name (the fully qualified path to the file containing the schema), the schema
-    path (the fully qualified name of the schema) and suffix (the suffix of the file containing the schema).
-    visit_schema must return either None or a value. If it returns a value that value is collected and the collection of
-    values is returned as the result of this function (walk_schemas).
-    """
-    result = []
-    for dir in os.walk(content_dir):
-        path = dir[0].replace("\\", "/").replace(os.path.sep, "/")
-        for filename in dir[2]:
-            suffix = get_suffix(filename)
-            if path.endswith("/"):
-                full_name = path + filename
-            else:
-                full_name = path + "/" + filename
-            if suffix in SUPPORTED_SUFFIXES:
-                schema_path = get_schema_path(full_name)
-                visit_result = visit_schema(path, full_name, schema_path, suffix)
-                if visit_result is not None:
-                    result.append(visit_result)
-    return result
-
-
 def get_args(argv=[]):
     """
     Defines and parses the commandline parameters for running the server.
@@ -916,7 +964,7 @@ def get_args(argv=[]):
     )
     parser.add_argument(
         "--content_dir",
-        help='The content directory to be used. Defaults to "./"',
+        help='The content directory to be used. Defaults to "./". If you specify parameters for a GitHub user and repo, then this is the path of the content directory relative to the repository.',
         type=str,
         default="./",
     )
@@ -943,7 +991,7 @@ def get_args(argv=[]):
     )
     parser.add_argument(
         "--ignore_namespaces",
-        help="""A list of namespaces that wilkl be ignored when inferring schemas to validate data against.
+        help="""A list of namespaces that will be ignored when inferring schemas to validate data against.
                 Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']""",
         nargs="*",
         default=["schema.org", "w3.org", "example.org"],
@@ -956,6 +1004,30 @@ def get_args(argv=[]):
     parser.add_argument("--ssl_keyfile", help="SSL key file")
     parser.add_argument("--ssl_certfile", help="SSL certificates file")
     parser.add_argument("--ssl_ca_certs", help="CA certificates file")
+    parser.add_argument(
+        "--github_repo",
+        type=str,
+        help="The name of the GitHub repository hosting the location specified in the content dir.",
+        default=None,
+    )
+    parser.add_argument(
+        "--github_user",
+        type=str,
+        help="The name of the GitHub user owning the GitHub repo.",
+        default=None,
+    )
+    parser.add_argument(
+        "--github_token",
+        type=str,
+        help="The access token for the GitHub repo. If no value is specified, no authentication is used with GitHub (which will limit the number of requests that can be made through the API).",
+        default=None,
+    )
+    parser.add_argument(
+        "--github_branch",
+        type=str,
+        help="The name of the GitHub branch to use. If none is specified (but a user and repo are), then Shapiro will use the default branch of that repo to retrieve schemas.",
+        default=None,
+    )
     return parser.parse_args(argv)
 
 
@@ -983,6 +1055,10 @@ def get_server(
     ssl_keyfile=None,
     ssl_certfile=None,
     ssl_ca_certs=None,
+    github_user=None,
+    github_repo=None,
+    github_token=None,
+    github_branch=None,
 ):
     global CONTENT_DIR
     CONTENT_DIR = content_dir
@@ -994,6 +1070,13 @@ def get_server(
     IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
+    global CONTENT_ADAPTOR
+    if github_user is not None and github_repo is not None:
+        CONTENT_ADAPTOR = GitHubAdaptor(
+            github_user, github_repo, github_token, github_branch
+        )
+    else:
+        CONTENT_ADAPTOR = FileSystemAdaptor()
     build_base_url(
         domain,
         (
@@ -1047,6 +1130,10 @@ async def start_server(
     ssl_keyfile=None,
     ssl_certfile=None,
     ssl_ca_certs=None,
+    github_user=None,
+    github_repo=None,
+    github_token=None,
+    github_branch=None,
 ):
     activate_routes(features)
     await get_server(
@@ -1061,6 +1148,10 @@ async def start_server(
         ssl_keyfile,
         ssl_certfile,
         ssl_ca_certs,
+        github_user,
+        github_repo,
+        github_token,
+        github_branch,
     ).serve()
 
 
@@ -1080,6 +1171,10 @@ def main(argv=None):
             args.ssl_keyfile,
             args.ssl_certfile,
             args.ssl_ca_certs,
+            args.github_user,
+            args.github_repo,
+            args.github_token,
+            args.github_branch,
         )
     )
 

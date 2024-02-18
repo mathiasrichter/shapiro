@@ -6,6 +6,7 @@ import shapiro_server
 from shapiro_util import BadSchemaException, NotFoundException, prune_iri
 from shapiro_model import Subscriptable
 from shapiro_render import JsonSchemaRenderer
+from shapiro_content import GitHubAdaptor, GitHubException, FileSystemAdaptor
 import subprocess
 from datetime import datetime
 import os
@@ -13,10 +14,17 @@ from jsonschema import validate
 
 ###########################################################################################
 # for running with an html coverage report :
-# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov-report=html
+# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov=shapiro_content --cov-report=html
 ###########################################################################################
 
+# This token is read only for contents on the Shapiro repo and is used to test Shapiro's Github content adaptor
+# it has no account permissions and will expire Feb 11, 2025 (expect tests to fail without valid access token)
+GITHUB_ACCESS = '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'
+
+DEFAULT_CONTENT_ADAPTOR = FileSystemAdaptor() # using file system adaptor as default, some dedicated tests check the GitHubAdaptor separately
+
 shapiro_server.CONTENT_DIR = "./test/ontologies"
+shapiro_server.CONTENT_ADAPTOR = DEFAULT_CONTENT_ADAPTOR
 shapiro_server.build_base_url("127.0.0.1:8000", False)
 
 shutil.rmtree(
@@ -41,8 +49,7 @@ client1 = TestClient(
     shapiro_server.app, "http://localhost:8000"
 )  # try resolving against localhost instead 127.0.0.1
 
-
-def test_get_server():
+def test_get_server_github():
     server = shapiro_server.get_server(
         "127.0.0.1",
         8000,
@@ -52,15 +59,40 @@ def test_get_server():
         "text/turtle",
         ["schema.org", "w3.org", "example.org"],
         "./fts_index",
+        None,
+        None,
+        None,
+        "mathiasrichter",
+        "shapiro",
+        GITHUB_ACCESS,
+        "main"
     )
     assert server is not None
 
+def test_get_server_file_system():
+    server = shapiro_server.get_server(
+        "127.0.0.1",
+        8000,
+        "127.0.0.1:8000",
+        shapiro_server.CONTENT_DIR,
+        "info",
+        "text/turtle",
+        ["schema.org", "w3.org", "example.org"],
+        "./fts_index",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+    )
+    assert server is not None
 
 def test_get_badschemas():
     response = client.get("/badschemas/")
     assert response.status_code == 200
     assert len(response.json()["badschemas"]) == len(shapiro_server.BAD_SCHEMAS)
-
 
 def test_get_existing_bad_schemas():
     result = shapiro_server.BAD_SCHEMAS
@@ -86,6 +118,10 @@ def test_commandline_parse_to_default():
     assert args.ssl_keyfile is None
     assert args.ssl_certfile is None
     assert args.ssl_ca_certs is None
+    assert args.github_user is None
+    assert args.github_repo is None
+    assert args.github_token is None
+    assert args.github_branch is None
 
 
 def test_commandline_parse_to_specified_values():
@@ -116,6 +152,14 @@ def test_commandline_parse_to_specified_values():
             "./certs/cert.crt",
             "--ssl_ca_certs",
             "./certs/ca_cert.crt",
+            "--github_user",
+            "user",
+            "--github_repo",
+            "repo",
+            "--github_token",
+            "token",
+            "--github_branch",
+            "branch",
         ]
     )
     assert args.host == "0.0.0.0"
@@ -130,7 +174,10 @@ def test_commandline_parse_to_specified_values():
     assert args.ssl_keyfile == "./certs/key.key"
     assert args.ssl_certfile == "./certs/cert.crt"
     assert args.ssl_ca_certs == "./certs/ca_cert.crt"
-
+    assert args.github_user == "user"
+    assert args.github_repo == "repo"
+    assert args.github_token == "token"
+    assert args.github_branch == "branch"
 
 def test_schema_fulltext_search():
     response = client.get("/search/?query=real")
@@ -516,8 +563,6 @@ def test_property_conflict_as_json_schema():
         headers={"accept": mime},
     )
     assert response.status_code == 200
-
-
     
 def test_subproperty_option_2_with_json_schema():
     mime = "application/schema+json"
@@ -955,22 +1000,22 @@ def test_subscriptable():
 
 
 def test_schema_housekeeping():
-    s = shapiro_server.SchemaHousekeeping(10)
+    s = shapiro_server.SchemaHousekeeping(shapiro_server.CONTENT_ADAPTOR, 10)
     s.perform_housekeeping_on([])
 
 
 def test_search_housekeeping_unsuccessful():
-    shapiro_server.SearchIndexHousekeeping(index_dir="./")
+    shapiro_server.SearchIndexHousekeeping(shapiro_server.CONTENT_ADAPTOR, index_dir="./")
 
 
 def test_ekg_housekeeping_unsuccessful():
-    e = shapiro_server.EKGHouseKeeping()
-    e.add_schema("invalidpath", "invalidname", "invalidschemapath", "invalidsuffix")
+    e = shapiro_server.EKGHouseKeeping(shapiro_server.CONTENT_ADAPTOR )
+    e.add_schema("invalidname")
 
 
 def test_bad_schema_housekeeping():
     try:
-        b = shapiro_server.BadSchemaHousekeeping()
+        b = shapiro_server.BadSchemaHousekeeping(shapiro_server.CONTENT_ADAPTOR)
         b.last_execution_time = datetime.now()
         sleep(3)  # give it a few seconds
         schema_file_name = "./test/ontologies/test_bad_schema.ttl"
@@ -1025,3 +1070,97 @@ def test_shapiro_main():
     shapiro_server.main([])
     shapiro_server.shutdown()
     subprocess.run(["python3", "shapiro_server.py", "--help"])
+
+
+def test_github_adaptor_without_branch():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    file = 'test/ontologies/person.jsonld'
+    content = GitHubAdaptor(user, repo, GITHUB_ACCESS).get_content(file)
+    assert content is not None
+    
+def test_github_adaptor_with_branch():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'dev'
+    file = 'test/ontologies/person.jsonld'
+    content = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+    assert content is not None
+    
+def test_github_adaptor_with__nonexisting_branch():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'foobla'
+    file = 'test/ontologies/person.jsonld'
+    with pytest.raises(GitHubException):
+        GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+    
+def test_github_adaptor_with__nonexisting_file():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'main'
+    file = 'test/ontologies/person.jsonld_foo'
+    with pytest.raises(GitHubException):
+        GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+
+def test_github_adaptor_is_file_with_file():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'dev'
+    file = 'test/ontologies/person.jsonld'
+    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
+    assert result is True
+    
+def test_github_adaptor_is_file_with_nonexisting_file():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'dev'
+    file = 'test/ontologies/person.jsonldfoo'
+    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
+    assert result is False 
+
+def test_github_adaptor_get_changed_files():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'dev'
+    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies")
+    assert result is not None
+    assert len(result) > 0 
+
+def test_github_adaptor_get_changed_files_since_now():
+    user = 'mathiasrichter'
+    repo = 'shapiro'
+    branch = 'dev'
+    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies", datetime.now())
+    assert result is not None
+    assert len(result) == 0 
+
+def test_file_adaptor():
+    file = 'test/ontologies/person.jsonld'
+    content = FileSystemAdaptor().get_content(file)
+    assert content is not None
+    
+def test_file_adaptor_with_non_existing_file():
+    file = 'test/ontologies/person.jsonldfoo'
+    with pytest.raises(FileNotFoundError):
+        FileSystemAdaptor().get_content(file)
+
+def test_file_adaptor_is_file():
+    file = 'test/ontologies/person.jsonld'
+    result = FileSystemAdaptor().is_file(file)
+    assert result is True
+
+def test_file_adaptor_is_file_with_nonexisting_file():
+    file = 'test/ontologies/person.jsonldfoo'
+    result = FileSystemAdaptor().is_file(file)
+    assert result is False
+
+def test_file_adaptor_get_changed_files():
+    result = FileSystemAdaptor().get_changed_files("test/ontologies")
+    assert result is not None
+    assert len(result) > 0 
+
+def test_file_adaptor_get_changed_files_since_now():
+    result = FileSystemAdaptor().get_changed_files("test/ontologies", datetime.now())
+    assert result is not None
+    assert len(result) == 0 
