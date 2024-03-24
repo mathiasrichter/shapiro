@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
 import os
 from rdflib import Graph
-import pyshacl
 import json
 import copy
 from urllib.parse import urlparse, ParseResult
@@ -583,7 +582,6 @@ def get_schema_graph(url: str, schema_path: str) -> Graph:
         and url_parsed.netloc not in schema_path
         and alt_netloc not in schema_path
     ):  # last 2 predicates avoid doing remote calls to this server
-        # this is the host name of some other server, so let pyshacl resolve the URI
         if BASE_URL.startswith("https://"):
             schema_graph = Graph().parse("https://" + schema_path)
         else:

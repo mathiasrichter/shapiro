@@ -13,4 +13,3 @@ colorlog
 jsonschema
 multiline
 rdflib<7.0.0
-pyshacl
