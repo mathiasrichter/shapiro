@@ -3,6 +3,7 @@ scratch.*
 fts_index/
 *.ssh
 .ssh
+github_read_token.txt
 
 # folder from intellij
 .idea

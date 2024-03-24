@@ -58,13 +58,16 @@ class GitHubAdaptor(ContentAdaptor):
         self.branch_hash = self.get_branch_hash()
         log.info("Initialized GitHubAdaptor (user '{}', repo '{}', branch '{}', branch hash '{}', token '{}')".format(self.user, self.repo, self.branch, self.branch_hash, self.token))
         
-    def get_default_branch(self):
+    def get_auth(self):
         auth = None
         if self.token is not None:
-            auth = {"Authorization": self.token}
+            auth = {"Authorization": "Bearer "+self.token}
+        return auth        
+        
+    def get_default_branch(self):
         url = self.BRANCH_RETRIEVE_URL.format(user=self.user, repo=self.repo)
         log.info("GitHubAdaptor: Retrieving default branch for repo '{}'".format(self.repo))
-        response = requests.get(url, headers= auth)
+        response = requests.get(url, headers = self.get_auth())
         data = response.json()
         if response.status_code != 200:
             # GitHub responded with an error, so seomthing isn't right with the request
@@ -77,11 +80,8 @@ class GitHubAdaptor(ContentAdaptor):
         return None
     
     def get_branch_hash(self):
-        auth = None
-        if self.token is not None:
-            auth = {"Authorization": self.token}
         url = self.BRANCH_HASH_URL.format(user=self.user, repo=self.repo)
-        response = requests.get(url, headers= auth)
+        response = requests.get(url, headers= self.get_auth())
         data = response.json()
         if response.status_code != 200:
             # GitHub responded with an error, so seomthing isn't right with the request
@@ -102,11 +102,8 @@ class GitHubAdaptor(ContentAdaptor):
         
     def get_content(self, filepath:str) -> str:
         filepath = self.trim(filepath)
-        auth = None
-        if self.token is not None:
-            auth = {"Authorization": self.token}
         url = self.FILE_RETRIEVE_URL.format(user=self.user, repo=self.repo, path=filepath, branch=self.branch)
-        response = requests.get(url, headers= auth)
+        response = requests.get(url, headers= self.get_auth())
         log.info("Loading '{}' from GitHub.".format(filepath))
         data = response.json()
         if response.status_code != 200:
@@ -136,10 +133,7 @@ class GitHubAdaptor(ContentAdaptor):
             return True
         else:
             url = self.COMMITS_URL.format(user=self.user, repo=self.repo, branch_hash=self.branch_hash, path=filepath)
-        auth = None
-        if self.token is not None:
-            auth = {"Authorization": self.token}
-        response = requests.get(url, headers = auth)
+        response = requests.get(url, headers = self.get_auth())
         data = response.json()
         if response.status_code != 200:
             # GitHub responded with an error, so seomthing isn't right (e.g. file not found, branch not found, etc.)
@@ -154,11 +148,8 @@ class GitHubAdaptor(ContentAdaptor):
         """Returns the list of filepaths that have changed in between the current time and the time specified in since."""
         dirpath = self.trim(dirpath)
         result = []
-        auth = None
-        if self.token is not None:
-            auth = {"Authorization": self.token}
         url = self.TREE_RETRIEVE_URL.format(user=self.user, repo=self.repo, path=dirpath, branch=self.branch)
-        response = requests.get(url, headers=auth)
+        response = requests.get(url, headers=self.get_auth())
         data = response.json()
         if response.status_code != 200:
             # GitHub responded with an error message, so seomthing isn't right (e.g. file not found, branch not found, etc.)

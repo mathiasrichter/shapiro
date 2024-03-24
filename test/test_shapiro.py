@@ -11,15 +11,36 @@ import subprocess
 from datetime import datetime
 import os
 from jsonschema import validate
+import warnings
 
 ###########################################################################################
+# for running tests excluding the github content adaptor (if you do not have a read access token to the Shapiro repo)
+# this will not run the tests for the cithub content adaptor, but will issue warnings that these tests are omitted:
+# pytest
+#
+# for running tests with the including the github content adaptor tests:
+# pytest --github_token=<GITHUB_TOKEN_WITH_READ_ACCESS_TO_SHAPIRO_REPO>
+#
 # for running with an html coverage report :
-# pytest --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov=shapiro_content --cov-report=html
+# pytest --github_token=<GITHUB_TOKEN_WITH_READ_ACCESS_TO_SHAPIRO_REPO> --cov=shapiro_render --cov=shapiro_util --cov=shapiro_server  --cov=shapiro_model --cov=shapiro_content --cov-report=html
 ###########################################################################################
 
-# This token is read only for contents on the Shapiro repo and is used to test Shapiro's Github content adaptor
-# it has no account permissions and will expire Feb 11, 2025 (expect tests to fail without valid access token)
-GITHUB_ACCESS = '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'
+GITHUB_ACCESS = None
+
+def warn(msg:str):
+    warnings.warn(UserWarning(msg))
+
+def test_github_token(request):
+    token = request.config.getoption("--github_token")
+    global GITHUB_ACCESS
+    GITHUB_ACCESS = token
+    
+def check_token(test_name:str) -> bool :
+    if GITHUB_ACCESS is not None:
+        return True
+    else:
+        warn("No GitHub token specified. Not executing test '{}'. ".format(test_name))
+        return False
 
 DEFAULT_CONTENT_ADAPTOR = FileSystemAdaptor() # using file system adaptor as default, some dedicated tests check the GitHubAdaptor separately
 
@@ -50,24 +71,25 @@ client1 = TestClient(
 )  # try resolving against localhost instead 127.0.0.1
 
 def test_get_server_github():
-    server = shapiro_server.get_server(
-        "127.0.0.1",
-        8000,
-        "127.0.0.1:8000",
-        shapiro_server.CONTENT_DIR,
-        "info",
-        "text/turtle",
-        ["schema.org", "w3.org", "example.org"],
-        "./fts_index",
-        None,
-        None,
-        None,
-        "mathiasrichter",
-        "shapiro",
-        GITHUB_ACCESS,
-        "main"
-    )
-    assert server is not None
+    if check_token('test_get_server_github') is True:
+        server = shapiro_server.get_server(
+            "127.0.0.1",
+            8000,
+            "127.0.0.1:8000",
+            shapiro_server.CONTENT_DIR,
+            "info",
+            "text/turtle",
+            ["schema.org", "w3.org", "example.org"],
+            "./fts_index",
+            None,
+            None,
+            None,
+            "mathiasrichter",
+            "shapiro",
+            GITHUB_ACCESS,
+            "main"
+        )
+        assert server is not None
 
 def test_get_server_file_system():
     server = shapiro_server.get_server(
@@ -1073,67 +1095,75 @@ def test_shapiro_main():
 
 
 def test_github_adaptor_without_branch():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    file = 'test/ontologies/person.jsonld'
-    content = GitHubAdaptor(user, repo, GITHUB_ACCESS).get_content(file)
-    assert content is not None
+    if check_token('test_github_adaptor_without_branch') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        file = 'test/ontologies/person.jsonld'
+        content = GitHubAdaptor(user, repo, GITHUB_ACCESS).get_content(file)
+        assert content is not None
     
 def test_github_adaptor_with_branch():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'dev'
-    file = 'test/ontologies/person.jsonld'
-    content = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
-    assert content is not None
+    if check_token('test_github_adaptor_with_branch') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'dev'
+        file = 'test/ontologies/person.jsonld'
+        content = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+        assert content is not None
     
 def test_github_adaptor_with__nonexisting_branch():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'foobla'
-    file = 'test/ontologies/person.jsonld'
-    with pytest.raises(GitHubException):
-        GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+    if check_token('test_github_adaptor_with__nonexisting_branch') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'foobla'
+        file = 'test/ontologies/person.jsonld'
+        with pytest.raises(GitHubException):
+            GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
     
 def test_github_adaptor_with__nonexisting_file():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'main'
-    file = 'test/ontologies/person.jsonld_foo'
-    with pytest.raises(GitHubException):
-        GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
+    if check_token('test_github_adaptor_with__nonexisting_file') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'main'
+        file = 'test/ontologies/person.jsonld_foo'
+        with pytest.raises(GitHubException):
+            GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_content(file)
 
 def test_github_adaptor_is_file_with_file():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'dev'
-    file = 'test/ontologies/person.jsonld'
-    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
-    assert result is True
+    if check_token('test_github_adaptor_is_file_with_file') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'dev'
+        file = 'test/ontologies/person.jsonld'
+        result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
+        assert result is True
     
 def test_github_adaptor_is_file_with_nonexisting_file():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'dev'
-    file = 'test/ontologies/person.jsonldfoo'
-    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
-    assert result is False 
+    if check_token('test_github_adaptor_is_file_with_nonexisting_file') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'dev'
+        file = 'test/ontologies/person.jsonldfoo'
+        result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).is_file(file)
+        assert result is False 
 
 def test_github_adaptor_get_changed_files():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'dev'
-    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies")
-    assert result is not None
-    assert len(result) > 0 
+    if check_token('test_github_adaptor_get_changed_files') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'dev'
+        result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies")
+        assert result is not None
+        assert len(result) > 0 
 
 def test_github_adaptor_get_changed_files_since_now():
-    user = 'mathiasrichter'
-    repo = 'shapiro'
-    branch = 'dev'
-    result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies", datetime.now())
-    assert result is not None
-    assert len(result) == 0 
+    if check_token('test_github_adaptor_get_changed_files_since_now') is True:
+        user = 'mathiasrichter'
+        repo = 'shapiro'
+        branch = 'dev'
+        result = GitHubAdaptor(user, repo, GITHUB_ACCESS, branch).get_changed_files("test/ontologies", datetime.now())
+        assert result is not None
+        assert len(result) == 0 
 
 def test_file_adaptor():
     file = 'test/ontologies/person.jsonld'

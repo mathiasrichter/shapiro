@@ -23,4 +23,4 @@ jobs:
         cache: 'pip' 
     - run: pip install --upgrade pip
     - run: pip install -r requirements.txt
-    - run: pytest    
+    - run: pytest --github_token=${{ secrets.READ_ACCESS }}
