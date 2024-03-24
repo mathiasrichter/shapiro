@@ -19,7 +19,6 @@
     - [No URL fragments](#no-url-fragments)
   - [Hierarchical Namespaces](#hierarchical-namespaces)
   - [Querying the combined Graph of all Schemas served by Shapiro](#querying-the-combined-graph-of-all-schemas-served-by-shapiro)
-  - [Validation with Shapiro](#validation-with-shapiro)
   - [Searching Shapiro](#searching-shapiro)
   - [Shapiro UI](#shapiro-ui)
   - [Writing Semantic Models to be served by Shapiro](#writing-semantic-models-to-be-served-by-shapiro)
@@ -73,28 +72,6 @@ Shapiro allows you to keep schemas/ontologies in arbitrary namespace hierarchies
 ## Querying the combined Graph of all Schemas served by Shapiro
 Shapiro keeps the complete graph of all schemas combined in memory. The graph can be queried using the post request API `/query`. This takes a SPARQL query (no updates) in the request body. That way you can query and mine the combined graph of all models.
 
-## Validation with Shapiro
-Validation is a bit more involved, in particular since Shapiro allows you to enable/disable API features (serving schemas and validating data against schemas).
-If both serving schemas and validation are activated, you can validate against schemas residing on the same Shapiro instance offering the validation:
-
-`http://localhost:8000/validate/org/example/myschemas/person`
-
-Posting against this url (with a request body containing the data to be validated), will get the schema named `org/example/myschemas/person` from `localhost:8000` to validate the data against. Obviously, this will not work if you've switched off the 'serve' feature on `localhost:8000`.
-
-Assume you want to validate your data against a schema sitting on a different schema server, you can do:
-
-`http://localhost:8000/validate/www.w3.org/ms/shacl/something`
-
-This would validate the data provided in the body of the post request against the schema served at `http://wwww3.org/ms/shacl` under the name of `something`.
-
-Assume you want to use one instance of Shapiro to just serve schemas, and another instance of Shapiro to just validate schemas. Assume the instance serving schemas sits under `localhost:8000` and the instance just validating schemas sits under `localhost:3333`. You would run your post request against the following URL:
-
-`http://localhost:3333/validate/localhost:8000/org/example/myschemas/person`
-
-This would look for the schema names `org/example/myschemas/person`on `localhost:8000` (the instance that just serves schemas) and validate the schema obtained from there in `localhost:8000` against the data provided in the body of the request.
-
-You don't need to specify an explicit schema to validate data against. If you specify no schema, Shapiro will infer the schemas to validate the data against using the prefix IRIs defined used in the data graph. The algorithm uses a configurable list of namespaces to ignore when infering the schemas - this list can be set using the command line parameter `--ignore_namespaces`and defaults to `['schema.org', 'w3.org', 'example.org']`. This means that prefixes pointing to these namespaces are assumed never to contain SHACL constraints to validate a given data graph against.
-
 ## Searching Shapiro
 Shapiro uses Whoosh Full-text-search to index all schemas it serves. Shapiro regularly checks for modified or new schemas in its content directory and indexes them.
 
@@ -103,11 +80,10 @@ Shapiro provides a minimal UI available at `/welcome/`. Any `GET`request to `/` 
 The Shapiro UI also renders models/schemas/ontologies as HTML.
 
 ## Writing Semantic Models to be served by Shapiro
-Given the number of possibilities to use ontologies & vocabularies for your models, Shapiro can't anticipate them all. While I'm trying to keep Shapiro as open as possible and while Shapiro can serve any kind of ontology or vocabulary, things like validation, HTML rendering of models and JSON-SCHEMA rendering of models work best if you keep the following in mind:
+Given the number of possibilities to use ontologies & vocabularies for your models, Shapiro can't anticipate them all. While I'm trying to keep Shapiro as open as possible and while Shapiro can serve any kind of ontology or vocabulary, HTML rendering of models and JSON-SCHEMA rendering of models work best if you keep the following in mind:
 
 - Use RDFS for modelling your classes and properties. HTML rendering will work best with this vocabulary. 
 - Use RDFS labels that are acceptable object names resp. property names in programming languages (specifically when you use JSON-SCHEMA & OpenAPI in conjunction with schemas hosted by Shapiro)
-- Use SHACL for constraints. Shapiro cannot validate your data against models, if you use anything else and it cannot convert semantic models to JSON-SCHEMA otherwise. Of course, Shapiro will also render SHACL constraints in HTML.
 - JSON-SCHEMA conversion requires your model defining NodeShapes with the appropriate SHACL properties and constraints. Shapiro will render empty schemas if you ask for JSON-SCHEMA of an RDFS class.
 
 ## Installing Shapiro
@@ -131,8 +107,6 @@ Commandline Parameter Reference
 |`--content_dir`|The content directory to be used. Defaults to "./". If you specify parameters for a GitHub user and repo, then this is the path of the content directory relative to the repository. If you're using GitHub to serve schemas from, this would be relative to the repository's root directory.|
 |`--log_level`|The log level to run with. Defaults to "info"|
 |`--default_mime`|The mime type to use if the requested mimetype in the accept header is not available or usable. Defaults to "text/turtle".|
-|`--features`|What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate'(for validating data against ontologies) or 'all'. Default is 'all'.<br>This allows to run multiple instances of Shapiro for separate purposes (serving schemas, validation).|
-|`--ignore_namespaces`|A list of namespaces that will be ignored when inferring schemas to validate data against. <br>Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']|
 |`--index_dir`|The directory where Shapiro stores the full-text-search indices. Default is ./fts_index|
 |`--ssl_keyfile`<br>`--ssl_certfile`<br>`--ssl_ca_certs`|If these are set, Shapiro uses SSL. No defaults.|
 |`--github_user`<br>`--github_repo`|If these are set, Shapiro serves schemas from the content dir in this repo.|
@@ -140,4 +114,4 @@ Commandline Parameter Reference
 |`--github_token`|The access token for the GitHub repo (if guthub repo and github user parameters are specified). If no value is specified, no authentication is used with GitHub (which will limit the number of requests that can be made through the API).|
 
 
-Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, domain, content dir, log level, default mime type, features, ignore namespaces, index directory, and if needed ssl-parameters).
+Make sure you run `python shapiro_server.py --help`for a full reference of command line parameters (host, port, domain, content dir, log level, default mime type, index directory, and if needed ssl-parameters).

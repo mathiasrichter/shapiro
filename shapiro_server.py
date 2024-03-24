@@ -58,8 +58,6 @@ SUPPORTED_MIME_TYPES = [
     MIME_JSONSCHEMA.lower(),
 ]
 
-IGNORE_NAMESPACES = []
-
 CONTENT_DIR = "./"
 INDEX_DIR = "./fts_index"
 BAD_SCHEMAS = {}
@@ -320,11 +318,6 @@ def get_version():
 def init():
     log.info("Welcome to Shapiro.")
     log.info("Using '{}' as content dir.".format(CONTENT_DIR))
-    log.info(
-        "Ignoring the following namespace for validation inference: {}".format(
-            IGNORE_NAMESPACES
-        )
-    )
     global HOUSEKEEPERS
     b = BadSchemaHousekeeping(CONTENT_ADAPTOR)
     b.check_for_schema_updates()  # run once synchronously so all other housekeepers can ignore quarantined schemas
@@ -613,8 +606,7 @@ def get_schema_graph(url: str, schema_path: str) -> Graph:
         schema_response = get_schema(mod_schema_path, MIME_TTL)
         if schema_response.status_code == status.HTTP_404_NOT_FOUND:
             raise Exception(
-                """Schema '{}' not found on this server - do you have the right schema name or is the feature to
-                serve schemas switched off in this server?""".format(
+                """Schema '{}' not found on this server - do you have the right schema name?""".format(
                     schema_path
                 )
             )
@@ -624,128 +616,6 @@ def get_schema_graph(url: str, schema_path: str) -> Graph:
             schema_graph.parse(schema, format="ttl")
             log.info("Resolving local schema at '{}'".format(schema_path))
     return schema_graph
-
-
-@app.post("/validate/{schema_path:path}", status_code=200)
-async def validate(schema_path: str, request: Request):
-    """
-    Validate the data provided in the body of the request against the schema at the specified path.
-    Returns status 200 OK with a validation report in JSONLD format (http://www.w3.org/ns/shacl#ValidationReport),
-    if processing succeeded and resulted in a validation report - note that the validation report
-    can still indicate that the provided data did not validate against the specified schema.
-    If processing failed due to issues obtaining/parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
-
-    If no schema_path is provided, then validate the data provided in the body of the request against one or more
-    schemas inferred from the data (by context or prefix) - this will validate the data against any schema referenced
-    by the data.
-    Returns status 200 OK with a of validation report in JSONLD format.
-    """
-    try:
-        content_type = request.headers.get("content-type", "")
-        supported = [MIME_TTL, MIME_JSONLD]
-        if content_type not in supported:
-            err_msg = (
-                "Data must be supplied as content-type one of '{}', not '{}''".format(
-                    supported, content_type
-                )
-            )
-            log.error(err_msg)
-            return JSONResponse(
-                content={"err_msg": err_msg},
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            )
-        data_format = None
-        if content_type == MIME_TTL:
-            data_format = "ttl"
-        if content_type == MIME_JSONLD:
-            data_format = "json-ld"
-        data = await request.body()
-        data_graph = Graph()
-        data_graph.parse(data, format=data_format)
-        if schema_path is None or schema_path == "":
-            log.info(
-                "No schema path provided for validate request - inferring model to validate against."
-            )
-            return await validate_infer_model(request, data_graph, data_format)
-        log.info(
-            "Validating data (formatted as {}) against schema {}.".format(
-                data_format, schema_path
-            )
-        )
-        schema_graph = get_schema_graph(request.url._url, schema_path)
-        result = pyshacl.validate(
-            data_graph
-            + schema_graph,  # needed to ensure inheritance is picked up properly
-            inference="rdfs",
-            serialize_report_graph="json-ld",
-        )
-        log.info("Successfully created validation report.")
-        report = json.loads(result[1])
-        return JSONResponse(content=report, media_type=MIME_JSONLD)
-    except Exception as x:
-        err_msg = "Could not validate provided data against schema {}. Error details: {}".format(
-            schema_path, x
-        )
-        log.error(err_msg)
-        return JSONResponse(
-            content={"err_msg": err_msg},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
-
-
-async def validate_infer_model(request: Request, data_graph: Graph, data_format: str):
-    """
-    Validate the data provided in the body of the request against one or more schemas inferred from the
-    data (by context or prefix) - this will validate the data against any schema referenced by the data.
-    Returns status 200 OK with a collection of validation reports in JSONLD format
-    (http://www.w3.org/ns/shacl#ValidationReport) keyed by schema against validation was run, if processing succeeded
-    and resulted in one or more validation reports (in case there were references to multiple schemas) - note that the
-    validation report can still indicate that the provided data did not validate against the specified schema.
-    If processing failed due to issues obtaining/parsing the data or the schema, returns 422 UNPROCESSABLE ENTITY.
-    """
-    # need to infer the schema graph(s) to validate against
-    # we do this by extracting the schema prefixes and validating
-    # the data against every prefix
-    schema_graphs = []
-    for s, p, o in data_graph:
-        iri = str(s)
-        if (
-            iri is not None
-            and iri.lower().startswith("http")
-            and iri not in schema_graphs
-        ):
-            schema_graphs.append(iri)
-        iri = str(p)
-        if (
-            iri is not None
-            and iri.lower().startswith("http")
-            and iri not in schema_graphs
-        ):
-            schema_graphs.append(iri)
-        iri = str(o)
-        if (
-            iri is not None
-            and iri.lower().startswith("http")
-            and iri not in schema_graphs
-        ):
-            schema_graphs.append(iri)
-    for i in IGNORE_NAMESPACES:
-        schema_graphs_copy = schema_graphs.copy()
-        for s in schema_graphs_copy:
-            if i in s:
-                schema_graphs.remove(s)
-    log.info(
-        "Validating data (formatted as {}) against {} schemas: {}".format(
-            data_format, len(schema_graphs), schema_graphs
-        )
-    )
-    results = {}
-    schema_graph = Graph()
-    for s in schema_graphs:
-        log.info("Getting schema graph {}".format(s))
-        schema_graph += get_schema_graph(request.url._url, s)
-    return await validate(s, request)
-
 
 def resolve(accept_header: str, path: str):
     """
@@ -982,21 +852,6 @@ def get_args(argv=[]):
         default=MIME_DEFAULT,
     )
     parser.add_argument(
-        "--features",
-        help="""What features should be enabled in the API. Either 'serve' (for serving ontologies) or 'validate' 
-                (for validating data against ontologies) or 'all'. Default is 'all'.""",
-        type=str,
-        default="all",
-        choices=["all", "serve", "validate"],
-    )
-    parser.add_argument(
-        "--ignore_namespaces",
-        help="""A list of namespaces that will be ignored when inferring schemas to validate data against.
-                Specify as space-separated list of namespaces. Default is ['schema.org','w3.org','example.org']""",
-        nargs="*",
-        default=["schema.org", "w3.org", "example.org"],
-    )
-    parser.add_argument(
         "--index_dir",
         help="The directory where Shapiro stores the full-text-search indices. Default is ./fts_index",
         default="./fts_index/",
@@ -1050,7 +905,6 @@ def get_server(
     content_dir: str,
     log_level: str,
     default_mime: str,
-    ignore_namespaces: List[str],
     index_dir: str,
     ssl_keyfile=None,
     ssl_certfile=None,
@@ -1066,8 +920,6 @@ def get_server(
         CONTENT_DIR += "/"
     global MIME_DEFAULT
     MIME_DEFAULT = default_mime
-    global IGNORE_NAMESPACES
-    IGNORE_NAMESPACES = ignore_namespaces
     global INDEX_DIR
     INDEX_DIR = index_dir
     global CONTENT_ADAPTOR
@@ -1098,25 +950,6 @@ def get_server(
     server = uvicorn.Server(config)
     return server
 
-
-def activate_routes(features: str):
-    """
-    Disable the routes according to the features spec ('serve' to onlky serve schemas, 'validate' to only validate
-    schemas, 'all' to both serve and validate).
-    """
-    global ROUTES
-    if ROUTES is None:
-        ROUTES = copy.copy(app.routes)  # save original list of routes
-    for r in ROUTES:  # restore original list of routes
-        if r not in app.routes:
-            app.routes.append(r)
-    for r in app.routes:
-        if (features == "validate" and r.name == "get_schema") or (
-            features == "serve" and r.name == "validate"
-        ):
-            app.routes.remove(r)
-
-
 async def start_server(
     host: str,
     port: int,
@@ -1124,8 +957,6 @@ async def start_server(
     content_dir: str,
     log_level: str,
     default_mime: str,
-    features: str,
-    ignore_namespaces: List[str],
     index_dir: str,
     ssl_keyfile=None,
     ssl_certfile=None,
@@ -1135,7 +966,6 @@ async def start_server(
     github_token=None,
     github_branch=None,
 ):
-    activate_routes(features)
     await get_server(
         host,
         port,
@@ -1143,7 +973,6 @@ async def start_server(
         content_dir,
         log_level,
         default_mime,
-        ignore_namespaces,
         index_dir,
         ssl_keyfile,
         ssl_certfile,
@@ -1165,8 +994,6 @@ def main(argv=None):
             args.content_dir,
             args.log_level,
             args.default_mime,
-            args.features,
-            args.ignore_namespaces,
             args.index_dir,
             args.ssl_keyfile,
             args.ssl_certfile,
