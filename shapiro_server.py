@@ -399,6 +399,11 @@ async def get_schema_list(request: Request):
     )
     return JSONResponse(content={"schemas": result})
 
+@app.get("/health/", status_code=200)
+async def health(request: Request):
+    log.info("Health status ok.")
+    return Response(status_code=200)
+
 
 @app.get("/badschemas/", status_code=200)
 async def get_badschema_list(request: Request):

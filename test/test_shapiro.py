@@ -108,6 +108,10 @@ def test_get_server_file_system():
         None
     )
     assert server is not None
+    
+def test_health():
+    response = client.get("/health/")
+    assert response.status_code == 200
 
 def test_get_badschemas():
     response = client.get("/badschemas/")
