@@ -60,15 +60,7 @@ def prefix(iri: str, name: str) -> str:
 
 def prune_iri(iri: str, name_only: bool = False) -> str:
     url = urlparse(iri)
-    result = url.path
-    if result.startswith("/"):
-        result = result[1 : len(result)]
-    if url.fragment == "" or url.fragment is None:
-        if result.endswith("/"):
-            result = result[0 : len(result) - 1]
-        result = result[result.rfind("/") + 1 : len(result)]
-    else:
-        result = url.fragment
-    if name_only is False:
-        result = prefix(iri, result)
+    result = url.path.strip("/")
+    result = result.split("/")[-1] if not url.fragment else url.fragment
+    if not name_only: result = prefix(iri, result)
     return result
