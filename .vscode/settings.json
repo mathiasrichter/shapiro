@@ -2,5 +2,10 @@
     "python.formatting.provider": "yapf",
     "yaml.schemas": {
         "swaggerviewer:openapi": "file:///Users/mrichter/shapiro/test/openapi/tutorial.yaml"
-    }
+    },
+    "python.testing.pytestArgs": [
+        "test"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
